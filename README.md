@@ -30,7 +30,15 @@ Every path in the manifest and in the worker is relative, so the app works at
 a subpath like `/project-arm/` as happily as at a domain root. `VERSION` in
 `sw.js` is what evicts the old cache — bump it on any deploy.
 
-Installing needs HTTPS, which GitHub Pages provides.
+Installing needs HTTPS. Netlify builds this repo already, and gives every
+pull request its own preview URL you can open on a phone before merging.
+`netlify.toml` only sets cache headers: the service worker, the manifest and
+the two pages must revalidate, because a CDN holding a stale worker pins
+every installed phone to an old version of the app.
+
+`.github/workflows/pages.yml` can publish to GitHub Pages instead, but it
+runs only from Actions → Run workflow, never on a push — a spare tyre, so it
+cannot redden the repo for a service nobody asked it to use.
 
 # The pocket app — `index.html`
 

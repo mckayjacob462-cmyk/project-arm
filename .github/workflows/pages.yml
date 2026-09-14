@@ -1,13 +1,15 @@
-# Publish the app to GitHub Pages on every push.
+# Publish the app to GitHub Pages.
 #
-# One-time setup: Settings -> Pages -> Source -> "GitHub Actions".
-# After that this runs itself and the site is live at
+# Netlify already builds this repo, so this is a spare tyre, not the wheel:
+# it runs only when you start it by hand, and never on a push. That way it
+# cannot turn the repo red for a service nobody asked it to use.
+#
+# To use it: Actions -> "Deploy to GitHub Pages" -> Run workflow. It turns
+# Pages on itself, and the site lands at
 # https://<owner>.github.io/project-arm/
 name: Deploy to GitHub Pages
 
 on:
-  push:
-    branches: [claude/mcode-gcode-flashcards-z9pj55]
   workflow_dispatch:
 
 permissions:
@@ -31,6 +33,8 @@ jobs:
 
       # there is no build: the site is the repository
       - uses: actions/configure-pages@v5
+        with:
+          enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
           path: .

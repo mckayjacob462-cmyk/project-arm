@@ -1,0 +1,25 @@
+# The site is the repository — there is nothing to build.
+#
+# The only thing worth saying is that the service worker and the manifest
+# must not be held in a CDN cache: they are how the app learns it has been
+# updated, so a stale one pins every installed phone to an old version.
+
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/trainer.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
