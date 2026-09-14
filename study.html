@@ -1398,9 +1398,44 @@ const bar = $('#appbar');
 addEventListener('scroll', () => { bar.classList.toggle('stuck', window.scrollY > 6); }, { passive:true });
 
 $$('.chips [data-deck]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.deck === S.deck)));
-buildQueue(false);
-renderCard();
-go(APP.tab && APP.tab !== 'settings' ? APP.tab : 'study');
+
+/* keep the card you are on across a republish */
+try {
+  if (window.claude && window.claude.hot){
+    window.claude.hot.snapshot(() => ({
+      tab:S.tab, deck:S.deck, only:S.only, code:S.queue[0], open:S.open,
+      bq:B.q, bf:B.filter, bo:B.open
+    }));
+  }
+} catch (e){}
+
+function boot(seed){
+  if (seed && seed.deck){
+    S.deck = seed.deck;
+    $$('[data-deck]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.deck === S.deck)));
+  }
+  if (seed && seed.only) S.only = seed.only;
+  buildQueue(false);
+  if (seed && seed.code && BY_CODE[seed.code]){
+    const i = S.queue.indexOf(seed.code);
+    if (i > 0) S.queue.unshift(S.queue.splice(i, 1)[0]);
+    S.open = !!seed.open;
+  }
+  if (seed && typeof seed.bq === 'string'){ B.q = seed.bq; $('#b-search').value = seed.bq; }
+  if (seed && seed.bf){
+    B.filter = seed.bf;
+    $$('[data-bdeck]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.bdeck === B.filter)));
+  }
+  if (seed && seed.bo) B.open = seed.bo;
+  renderCard();
+  const tab = (seed && seed.tab) || APP.tab;
+  go(tab && tab !== 'settings' ? tab : 'study');
+}
+
+try {
+  const hot = window.claude && window.claude.hot;
+  if (hot && hot.ready) hot.ready(boot); else boot(hot && hot.data);
+} catch (e){ boot(); }
 
 })();
 </script>
