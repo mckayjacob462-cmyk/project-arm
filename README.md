@@ -64,8 +64,11 @@ for *Need Practice* — or press the two buttons under the card. The card
 tracks the drag, tilts, and shows its verdict stamp before it goes.
 
 Under a revealed card, **Code Details** gives the description, the sample
-block, the animated visual of what the code does to the machine, and the
-shop-floor caution. The strip at the top counts mastered, learning and new
+block with **every word in it named** — which letter means what is where
+people actually get stuck, and the same letter changes job between lines, so
+`R` reads as an arc radius beside `G02` and as the retract plane inside a
+canned cycle — the animated visual of what the code does to the machine, and
+the shop-floor caution. The strip at the top counts mastered, learning and new
 across whichever deck is filtered — all, G codes or M codes.
 
 A drag that starts vertically scrolls the page; only a horizontal one
@@ -109,9 +112,24 @@ grading blind. Progress can be reset from here.
 
 # The deck — `engine.js`
 
-The 63 cards, the G-code interpreter, the canvas renderers, the schematics
-and the demo player live in `engine.js`, which both pages load. One source
-for the card text and one source for every animation.
+The 63 cards, the G-code interpreter, the canvas renderers, the schematics,
+the block reader and the demo player live in `engine.js`, which both pages
+load. One source for the card text and one source for every animation.
+
+## Drawing the schematics
+
+The 51 schematics share a small kit rather than each placing type by eye: one
+type scale, a `chip()` that sets a label on its own plate so it can sit over a
+grid or a part without fighting it, a `key()` for the diagrams carrying more
+than one colour, a `caption()` that measures and wraps to a second line
+instead of condensing one line edge to edge, and a heading band with a rule
+under it. Each schematic is a 100×75 unit box: heading to y 10, art to y 64,
+caption below that.
+
+The toolpath views follow the same rule. Plane lines label themselves at the
+right, the stock names its top face at whichever end the tool is not standing
+on, and the running note sits on a plate at the bottom — so the R plane and
+the top of the part can land at the same height without turning into soup.
 
 # Running it
 

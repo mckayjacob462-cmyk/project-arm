@@ -411,6 +411,93 @@ CARDS.forEach(c => { if (CATS.indexOf(c.cat) < 0) CATS.push(c.cat); });
 const BY_CODE = {};
 CARDS.forEach(c => { BY_CODE[c.c] = c; });
 
+/* ---- reading a sample block, one word at a time ----------------------
+   Beginners do not get stuck on what a block does so much as on which
+   letter means what. So rather than composing a sentence, name every word
+   in the sample and say what that word is for, in the context of its own
+   line: R is an arc radius next to G02 and the retract plane inside a
+   canned cycle, P is a dwell after G04 and a program number after M98. */
+
+const LETTER = {
+  X:'X axis position',  Y:'Y axis position',  Z:'Z axis position',
+  A:'rotary axis, in degrees',
+  F:'feed rate',        S:'spindle speed, rev/min',
+  T:'tool number',      H:'tool length offset register',
+  D:'cutter radius offset register',
+  I:'arc centre, X from the start point',
+  J:'arc centre, Y from the start point',
+  K:'arc centre, Z from the start point',
+  Q:'peck depth, per bite', R:'arc radius', P:'', L:'repeat count',
+  B:'rotary axis, in degrees'
+};
+const CODE_FALLBACK = {
+  G54:'work offset 1', G55:'work offset 2', G56:'work offset 3',
+  G57:'work offset 4', G58:'work offset 5', G59:'work offset 6',
+  G09:'exact stop, this block only'
+};
+
+/* the sheet writes descriptions for a printed table — "Circular
+   interpolation : CW", "Cutter radius compensation = cancel" — which read
+   oddly inline, so soften the table punctuation */
+function asNote(desc){
+  return String(desc)
+    .replace(/\s*\(Option\)\s*$/i, '')
+    .replace(/\s*:\s*/g, ', ')
+    .replace(/\s*=\s*/g, ' \u2014 ')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+function explainBlock(src){
+  const lines = [];
+  String(src).split('\n').forEach(raw => {
+    const cm = raw.match(/\(([^)]*)\)/);
+    const body = raw.replace(/\([^)]*\)/g, ' ');
+    const words = [];
+    const re = /([A-Za-z])\s*(-?\d*\.?\d+)/g;
+    let m;
+    while ((m = re.exec(body))) words.push({ w: m[0].replace(/\s+/g, ''), a: m[1].toUpperCase(), v: m[2] });
+    if (!words.length && !cm) return;
+
+    /* what kind of line is this? the same letter means different things */
+    const gs = words.filter(x => x.a === 'G').map(x => parseFloat(x.v));
+    const ms = words.filter(x => x.a === 'M').map(x => parseFloat(x.v));
+    const inCycle = gs.some(g => g >= 73 && g <= 89 && g !== 80);
+    const isDwell = gs.indexOf(4) >= 0;
+    const isG10   = gs.indexOf(10) >= 0;
+    const isCall  = ms.indexOf(98) >= 0;
+    const isArc   = gs.some(g => g === 2 || g === 3);
+    const isWcsP  = gs.some(g => g >= 54 && g <= 59) && !isG10 && !isCall && !inCycle;
+
+    const parts = words.map(x => {
+      const a = x.a;
+      let note;
+      if (a === 'G' || a === 'M'){
+        const card = BY_CODE[x.w];
+        note = card ? asNote(card.desc) : (CODE_FALLBACK[x.w] || null);
+      }
+      else if (a === 'X' && isDwell) note = 'hold this many seconds';
+      else if (a === 'Z' && inCycle) note = 'depth — the bottom of the hole';
+      else if (a === 'R' && inCycle) note = 'R plane — where rapid turns into feed';
+      else if (a === 'P' && inCycle) note = 'dwell at the bottom';
+      else if (a === 'P' && isDwell) note = 'dwell length';
+      else if (a === 'P' && isCall)  note = 'which subprogram to run';
+      else if (a === 'L' && isCall)  note = 'how many times to run it';
+      else if (a === 'P' && isWcsP)  note = 'which of the 48 extra offsets';
+      else if (a === 'P' && isG10)   note = 'which register to write';
+      else if (a === 'L' && isG10)   note = 'which offset table';
+      else if (a === 'R' && !isArc)  note = 'R plane';
+      else if ((a === 'I' || a === 'J' || a === 'K') && !isArc) note = 'offset from the start point';
+      else note = LETTER[a] || null;
+      return { word: x.w, note: note };
+    }).filter(x => x.note);
+
+    lines.push({ parts: parts, comment: cm ? cm[1].trim() : null });
+  });
+  return lines;
+}
+
 const SHEET_NOTES = {
   G: 'G04, G10 are non-modal. Effective only in the block commanded.',
   M: 'Only one ‘M’ code allowed per program block.'
@@ -663,7 +750,23 @@ function segPoint(s, u){
 
 const VP = { bg:'#0C0F0D', grid:'#171D17', grid2:'#232B22', ink:'#9AA598', ink2:'#616B60',
              edge:'#2C352B', rapid:'#E8564A', feed:'#3FC2B0', tool:'#F2B33D',
-             part:'#1E2A32', partLine:'#6F8B99', note:'#C9B078', white:'#DFE6DC' };
+             part:'#1E2A32', partLine:'#6F8B99', note:'#C9B078', white:'#DFE6DC',
+             /* labels sit on a plate of this, so they never fight the art behind */
+             plate:'rgba(8,11,9,.9)' };
+
+/* one type scale for every schematic, in schematic units (the box is 100x75) */
+const TYPE = { title:3.5, label:3.0, value:3.2, small:2.7, caption:3.15 };
+
+function roundRectPath(g, x, y, w, h, r){
+  r = Math.min(r, w / 2, h / 2);
+  g.beginPath();
+  g.moveTo(x + r, y);
+  g.arcTo(x + w, y,     x + w, y + h, r);
+  g.arcTo(x + w, y + h, x,     y + h, r);
+  g.arcTo(x,     y + h, x,     y,     r);
+  g.arcTo(x,     y,     x + w, y,     r);
+  g.closePath();
+}
 
 class Pad {
   constructor(cv){ this.cv = cv; this.g = cv.getContext('2d'); this.w = 0; this.h = 0; this.s = 1; }
@@ -698,6 +801,21 @@ class Pad {
     const g = this.g;
     g.save(); g.strokeStyle = col; g.lineWidth = w || 1; g.setLineDash(dash || []);
     g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); g.restore();
+  }
+  /* a label on its own plate, so a plane line and the top of the part can
+     land at the same height without turning into soup */
+  tag(str, x, y, col, align, size){
+    const g = this.g, fs = size || 10, padX = 5, padY = 3.5;
+    g.save();
+    g.font = '600 ' + fs + 'px "IBM Plex Mono", monospace';
+    const bw = g.measureText(str).width + padX * 2, bh = fs + padY * 2;
+    const left = align === 'right' ? x - bw : align === 'center' ? x - bw / 2 : x;
+    roundRectPath(g, left, y - bh / 2, bw, bh, 3);
+    g.fillStyle = VP.plate; g.fill();
+    g.fillStyle = col; g.textAlign = 'left'; g.textBaseline = 'middle';
+    g.fillText(str, left + padX, y);
+    g.restore();
+    return bw;
   }
 }
 
@@ -813,7 +931,7 @@ function drawStock(pad, stock, plane){
   g.strokeStyle = VP.partLine; g.lineWidth = 1.3;
   g.strokeRect(Math.round(x0) + .5, Math.round(y0) + .5, Math.round(x1 - x0), Math.round(y1 - y0));
   g.restore();
-  pad.txt('Z0 — top of part', x1 - 4, y0 - 10, VP.partLine, 9.5, 'right');
+
 }
 
 /* --- draws one interpreted program into one pad at time tNow --- */
@@ -839,10 +957,10 @@ function renderRun(pad, run, plane, tNow, stock, opts){
   if (plane === 'xz' && run.planes){
     const pl = run.planes;
     pad.line(0, pad.Y(pl.r), pad.w, pad.Y(pl.r), VP.note, 1, [3, 4]);
-    pad.txt('R plane', 5, pad.Y(pl.r) - 8, VP.note, 9.5);
+    pad.tag('R plane', pad.w - 5, pad.Y(pl.r), VP.note, 'right', 9.5);
     if (Math.abs(pl.init - pl.r) > 0.02){
       pad.line(0, pad.Y(pl.init), pad.w, pad.Y(pl.init), VP.note, 1, [3, 4]);
-      pad.txt('initial point', 5, pad.Y(pl.init) - 8, VP.note, 9.5);
+      pad.tag('initial point', pad.w - 5, pad.Y(pl.init), VP.note, 'right', 9.5);
     }
   }
 
@@ -865,9 +983,17 @@ function renderRun(pad, run, plane, tNow, stock, opts){
   if (run.usedHome) drawHome(pad, pad.X(plane === 'xy' ? HOME.x : HOME.x), pad.Y(plane === 'xy' ? HOME.y : HOME.z));
   if (cur) drawTool(pad, cur, plane, curSeg && curSeg.t === 'feed');
 
+  /* name the top face at whichever end of it the tool is not standing on */
+  if (stock && plane === 'xz'){
+    const sx0 = pad.X(stock[0]), sx1 = pad.X(stock[2]), sy0 = pad.Y(0);
+    const tx = cur ? pad.X(cur[0]) : -1e9;
+    if (Math.abs(tx - (sx0 + 20)) > 40) pad.tag('Z0', sx0 + 6, sy0, VP.partLine, 'left', 9.5);
+    else                                pad.tag('Z0', sx1 - 6, sy0, VP.partLine, 'right', 9.5);
+  }
+
   if (curSeg && curSeg.note && opts.notes !== false)
-    pad.txt(curSeg.note, pad.w / 2, pad.h - 12, VP.note, 10.5, 'center', 500);
-  if (opts.corner) pad.txt(opts.corner, pad.w - 7, 13, VP.ink2, 9.5, 'right');
+    pad.tag(curSeg.note, pad.w / 2, pad.h - 13, VP.note, 'center', 10.5);
+  if (opts.corner) pad.tag(opts.corner, pad.w - 6, 13, VP.ink2, 'right', 9.5);
   return { cur, curSeg };
 }
 
@@ -938,8 +1064,75 @@ function design(pad){
       g.lineTo(hx - hl * Math.cos(a + .42), hy - hl * Math.sin(a + .42));
       g.closePath(); g.fill(); g.restore();
     },
-    caption(str, col){ D.text(str, 50, 70.5, col || VP.note, 3.3, 'center', 500, true, 92); },
-    title(str){ D.text(str, 50, 5.5, VP.ink2, 3.1, 'center', 600, true, 92); }
+    /* --- measuring, so nothing has to be condensed or guessed at --- */
+    measure(str, size, weight, mono){
+      g.save();
+      g.font = (weight || 500) + ' ' + Math.max(8, L(size == null ? TYPE.label : size)) + 'px ' +
+        (mono === false ? '"Archivo", sans-serif' : '"IBM Plex Mono", monospace');
+      const w = g.measureText(String(str)).width;
+      g.restore();
+      return w / s;                                    /* px back into units */
+    },
+    wrap(str, maxW, size, weight, mono){
+      const words = String(str).split(' ');
+      const lines = [];
+      let cur = '';
+      for (const wd of words){
+        const t = cur ? cur + ' ' + wd : wd;
+        if (cur && D.measure(t, size, weight, mono) > maxW){ lines.push(cur); cur = wd; }
+        else cur = t;
+      }
+      if (cur) lines.push(cur);
+      return lines;
+    },
+    panel(x, y, w, h, fill, stroke, r){
+      g.save();
+      roundRectPath(g, X(x), Y(y), L(w), L(h), L(r == null ? 1.4 : r));
+      if (fill){ g.fillStyle = fill; g.fill(); }
+      if (stroke){ g.strokeStyle = stroke; g.lineWidth = L(.4); g.stroke(); }
+      g.restore();
+    },
+    /* a label on its own plate — readable over a grid, a part, anything */
+    chip(str, x, y, o){
+      o = o || {};
+      const size = o.size == null ? TYPE.label : o.size;
+      const weight = o.weight || 600, mono = o.mono !== false;
+      const padX = o.padX == null ? 1.5 : o.padX;
+      const w = D.measure(str, size, weight, mono) + padX * 2, h = size * 2.05;
+      const align = o.align || 'center';
+      const left = align === 'center' ? x - w / 2 : align === 'right' ? x - w : x;
+      D.panel(left, y - h / 2, w, h, o.bg === null ? null : (o.bg || VP.plate), o.border || null, o.r);
+      D.text(str, left + padX, y, o.col || VP.ink, size, 'left', weight, mono);
+      return { w, h, left, right: left + w };
+    },
+    /* a key, for the diagrams that carry more than one colour */
+    key(items, y, col){
+      const size = TYPE.small, gap = 2.2, sw = 3.4;
+      const widths = items.map(it => sw + 1.2 + D.measure(it[1], size, 600, true));
+      const total = widths.reduce((a, b) => a + b, 0) + gap * (items.length - 1);
+      let x = 50 - total / 2;
+      items.forEach((it, i) => {
+        D.line(x, y, x + sw, y, it[0], .8);
+        D.text(it[1], x + sw + 1.2, y, col || VP.ink2, size, 'left', 600);
+        x += widths[i] + gap;
+      });
+    },
+    /* the heading band across the top of every schematic */
+    title(str){
+      const lines = D.wrap(str, 88, TYPE.title, 700).slice(0, 1);
+      D.text(lines[0], 50, 5.4, VP.ink, TYPE.title, 'center', 700, true, 90);
+      D.line(5, 9.8, 95, 9.8, VP.edge, .3);
+    },
+    /* the caption band across the bottom: wraps to two lines rather than
+       squeezing one line of condensed type edge to edge */
+    caption(str, col){
+      const size = TYPE.caption;
+      const lines = D.wrap(str, 88, size, 500).slice(0, 2);
+      const top = lines.length > 1 ? 65.8 : 68.2;
+      D.panel(2, top, 96, 74 - top, VP.plate, null, 1.2);
+      const y0 = lines.length > 1 ? 68.4 : 71.0;
+      lines.forEach((ln, i) => D.text(ln, 50, y0 + i * 4.1, col || VP.note, size, 'center', 500));
+    }
   };
   return D;
 }
@@ -981,20 +1174,22 @@ offsets(D, t){
   D.text('G10 L2 P1', 9, 20, VP.feed, 3.4);
   D.text('X-12.5 Y-6.25', 9, 25.5, VP.white, 3.2);
   D.rect(56, 12, 38, 48, 'rgba(255,255,255,.02)', VP.edge, .5);
-  D.text('WORK OFFSET', 75, 17, VP.ink2, 2.9, 'center', 600);
+  D.text('WORK OFFSET', 75, 17, VP.ink, TYPE.small, 'center', 700);
   D.line(56, 20, 94, 20, VP.edge, .4);
+  D.text('X', 79, 24, VP.ink2, TYPE.small, 'right', 600);
+  D.text('Y', 93, 24, VP.ink2, TYPE.small, 'right', 600);
   const rows = [['G54', '-12.500', '-6.250'], ['G55', '-4.200', '-9.100'], ['G56', '0.000', '0.000']];
   const hit = t > .55;
   rows.forEach((r, i) => {
-    const y = 26 + i * 9, on = i === 0 && hit;
+    const y = 31 + i * 9, on = i === 0 && hit;
     if (on) D.rect(57, y - 4, 36, 8, 'rgba(242,179,61,.16)', null);
-    D.text(r[0], 59, y, on ? VP.tool : VP.ink2, 3);
-    D.text(i === 0 && !hit ? '0.000' : r[1], 82, y, on ? VP.tool : VP.white, 3, 'right');
-    D.text(i === 0 && !hit ? '0.000' : r[2], 92, y, on ? VP.tool : VP.white, 3, 'right');
+    D.text(r[0], 59, y, on ? VP.tool : VP.ink, TYPE.value, 'left', 600);
+    D.text(i === 0 && !hit ? '0.000' : r[1], 79, y, on ? VP.tool : VP.white, TYPE.value, 'right');
+    D.text(i === 0 && !hit ? '0.000' : r[2], 93, y, on ? VP.tool : VP.white, TYPE.value, 'right');
   });
   const p = easeHold(t, .18, .55);
-  if (p > 0 && p < 1) D.arrow(47, 22, 47 + 8 * p, 22 + 4 * p, VP.tool, .6);
-  else if (hit) D.arrow(47, 22, 55, 26, VP.tool, .6);
+  if (p > 0 && p < 1) D.arrow(47, 22, 47 + 8 * p, 22 + 9 * p, VP.tool, .6);
+  else if (hit) D.arrow(47, 22, 55, 31, VP.tool, .6);
   D.caption(hit ? 'register written — it overwrites what was typed in' : 'non-modal: this block only');
 },
 
@@ -1045,10 +1240,11 @@ planes(D, t, o){
   D.g.save(); D.g.strokeStyle = VP.tool; D.g.lineWidth = D.L(.8); D.g.setLineDash([D.L(2), D.L(2)]);
   D.g.beginPath(); D.g.arc(D.X(c[0]), D.Y(c[1]), D.L(7), 0, Math.PI * 2); D.g.stroke(); D.g.restore();
   D.circle(c[0] + 7 * Math.cos(ang), c[1] + 7 * Math.sin(ang) * .62, 1.9, VP.tool, null);
-  D.text('X', O[0] + ux[0] + 3, O[1] + 2, VP.ink2, 3);
-  D.text('Y', O[0] + uy[0] + 3, O[1] + uy[1] - 2, VP.ink2, 3);
-  D.text('Z', O[0] - 4, O[1] + uz[1], VP.ink2, 3);
-  D.text(p === 17 ? 'arc words  I  J' : p === 18 ? 'arc words  I  K' : 'arc words  J  K', 78, 52, VP.white, 3.2, 'center');
+  D.text('X', O[0] + ux[0] + 3, O[1] + 2, VP.ink, TYPE.label, 'left', 700);
+  D.text('Y', O[0] + uy[0] + 3, O[1] + uy[1] - 2, VP.ink, TYPE.label, 'left', 700);
+  D.text('Z', O[0] - 4.5, O[1] + uz[1], VP.ink, TYPE.label, 'left', 700);
+  D.chip(p === 17 ? 'arc words  I  J' : p === 18 ? 'arc words  I  K' : 'arc words  J  K',
+    50, 60.5, { col:VP.white, border:VP.edge });
   D.caption('arcs and cutter comp live in the active plane');
 },
 
@@ -1091,16 +1287,16 @@ carousel(D, t, o){
     D.circle(px, py, 3.4, sel ? 'rgba(242,179,61,.85)' : 'rgba(255,255,255,.06)', sel ? VP.tool : VP.ink2, .45);
     D.text(String(i + 1), px, py, sel ? VP.bg : VP.ink2, 2.6, 'center', 700);
   }
-  D.text('CAROUSEL', cx, cy, VP.ink2, 2.8, 'center', 600);
+  D.text('CAROUSEL', cx, cy, VP.ink2, TYPE.small, 'center', 600);
   const sx = 24;
-  D.rect(sx - 6, 14, 12, 12, 'rgba(255,255,255,.05)', VP.ink2, .5);
-  D.text('SPINDLE', sx, 10, VP.ink2, 2.8, 'center', 600);
+  D.rect(sx - 6, 15, 12, 12, 'rgba(255,255,255,.05)', VP.ink2, .5);
+  D.text('SPINDLE', sx, 12.3, VP.ink2, TYPE.small, 'center', 600);
   const held = change ? (t < .3 ? '1' : t > .75 ? '2' : '') : '1';
   if (held){
-    D.poly([[sx - 3, 26], [sx + 3, 26], [sx + 2, 38], [sx - 2, 38]], VP.tool, .5, null, 'rgba(242,179,61,.7)', true);
-    D.text('T' + held, sx, 20, VP.tool, 3.2, 'center', 600);
+    D.poly([[sx - 3, 27], [sx + 3, 27], [sx + 2, 39], [sx - 2, 39]], VP.tool, .5, null, 'rgba(242,179,61,.7)', true);
+    D.text('T' + held, sx, 21, VP.tool, TYPE.value, 'center', 700);
   }
-  if (change && t >= .3 && t <= .75) D.text('swapping', sx, 32, VP.note, 3, 'center');
+  if (change && t >= .3 && t <= .75) D.chip('swapping', sx, 33, { col:VP.note, size:TYPE.small });
   D.line(sx + 8, 42, cx - R - 3, 42, VP.edge, .4, [2, 2]);
   D.caption(change ? 'follow every M06 with its own G43 H__' : 'the one place the carousel will run');
 },
@@ -1111,28 +1307,30 @@ comp(D, t, o){
   D.title('G' + (side === 'left' ? '41 — TOOL LEFT' : side === 'right' ? '42 — TOOL RIGHT' : '40 — COMP CANCELLED'));
   const path = [[22, 52], [22, 24], [52, 24], [68, 38], [68, 52]];
   D.poly([[22, 52], [22, 24], [52, 24], [68, 38], [68, 52], [22, 52]], VP.partLine, .6, null, 'rgba(30,42,50,.9)', true);
-  D.text('programmed part line', 44, 58, VP.partLine, 3, 'center');
+
   const total = path.length - 1, tt = t * total;
   const i = Math.max(0, Math.min(total - 1, Math.floor(tt))), u = tt - i;
   const a = path[i], b = path[i + 1];
   const px = a[0] + (b[0] - a[0]) * u, py = a[1] + (b[1] - a[1]) * u;
   const dx = b[0] - a[0], dy = b[1] - a[1], m = Math.hypot(dx, dy) || 1;
   const off = side === 'off' ? 0 : (side === 'left' ? 1 : -1) * 5.5;
-  const nx = -dy / m * off, ny = dx / m * off;
+  /* v runs downward here, so the LEFT-hand normal of travel is (dy, -dx) */
+  const nx = dy / m * off, ny = -dx / m * off;
   if (side !== 'off'){
     const ghost = path.map((p, j) => {
       const q = path[Math.min(path.length - 1, j + 1)], r = path[Math.max(0, j - 1)];
       const ddx = q[0] - r[0], ddy = q[1] - r[1], mm = Math.hypot(ddx, ddy) || 1;
-      return [p[0] - ddy / mm * off, p[1] + ddx / mm * off];
+      return [p[0] + ddy / mm * off, p[1] - ddx / mm * off];
     });
     D.poly(ghost, VP.feed, .6, [3, 2]);
-    D.text('tool centre', ghost[1][0] + (off > 0 ? -14 : 3), ghost[1][1] - 3, VP.feed, 2.9);
   }
   D.circle(px + nx, py + ny, 5.5, 'rgba(242,179,61,.16)', VP.tool, .6);
   D.circle(px + nx, py + ny, .9, VP.tool, null);
   D.arrow(px, py, px + dx / m * 9, py + dy / m * 9, VP.white, .5, 2.4);
-  D.caption(side === 'off' ? 'cutter centre sits on the line — the part comes out oversize by one radius'
-    : 'looking along the direction of travel, the tool sits ' + side);
+  D.key(side === 'off' ? [[VP.partLine, 'part line'], [VP.tool, 'cutter']]
+                       : [[VP.partLine, 'part line'], [VP.feed, 'cutter centre'], [VP.tool, 'cutter']], 62.5);
+  D.caption(side === 'off' ? 'no offset — the cutter centre rides the line and the part comes out one radius oversize'
+    : 'face the direction of travel: the cutter sits to your ' + side);
 },
 
 /* --- G43 : tool length compensation --- */
@@ -1161,7 +1359,7 @@ tlo(D, t){
 wcs(D, t, o){
   D.title(o.ext ? 'G54 P1 – P48 — 48 MORE ORIGINS' : 'G54 – G59 — WHERE PART ZERO IS');
   D.rect(8, 12, 84, 50, 'rgba(255,255,255,.03)', VP.edge, .6);
-  D.text('MACHINE TABLE', 50, 66, VP.ink2, 2.9, 'center', 600);
+  D.text('MACHINE TABLE', 50, 64, VP.ink2, TYPE.small, 'center', 600);
   const cols = o.ext ? 8 : 3, rows = o.ext ? 6 : 2, n = cols * rows;
   const lit = Math.floor(t * n) % n;
   for (let i = 0; i < n; i++){
@@ -1194,7 +1392,7 @@ tap(D, t, o){
   D.arcArrow(50, 16, 7, cw ? -2.6 : .5, cw ? .5 : -2.6, down ? VP.feed : VP.rapid, .6, 2.6);
   D.text(cw ? 'M03' : 'M04', 62, 16, down ? VP.feed : VP.rapid, 3.2);
   D.arrow(38, z - 6, 38, z + (down ? 6 : -14), down ? VP.feed : VP.rapid, .5, 2.4);
-  D.text('feed = pitch × rpm', 50, 68, VP.note, 3.2, 'center');
+  D.chip('feed = pitch × rpm', 50, 63, { col:VP.note });
   D.caption(down ? 'feeding in, one pitch per revolution' : 'spindle reversed, feeding back out');
 },
 
@@ -1258,15 +1456,17 @@ feedmode(D, t, o){
   D.title('G' + (ipm ? '94 — INCHES PER MINUTE' : '95 — INCHES PER REVOLUTION'));
   const rows = [{ rpm: 500, y: 24 }, { rpm: 2000, y: 46 }];
   rows.forEach(r => {
-    D.text(r.rpm + ' rpm', 8, r.y, VP.ink2, 3.1);
+    D.text(r.rpm + ' rpm', 6, r.y, VP.ink, TYPE.value, 'left', 600);
     D.arcArrow(30, r.y, 5.5, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * ((t * r.rpm / 500) % 1) - .01, VP.ink2, .5, 2.2);
     const chip = ipm ? (r.rpm === 500 ? 4 : 1) : 2.5;
     const bar = ipm ? 26 : 26;
     D.rect(40, r.y - 3, bar, 6, 'rgba(255,255,255,.04)', VP.edge, .4);
     const nChips = Math.round(bar / chip);
     for (let i = 0; i < nChips; i++) D.line(40 + i * chip + 1, r.y - 2, 40 + i * chip + 1, r.y + 2, VP.feed, .45);
-    D.text(ipm ? 'F12.' : 'F0.006', 70, r.y, VP.feed, 3.1);
-    D.text(ipm ? (r.rpm === 500 ? 'heavy chip' : 'thin chip') : 'same chip', 84, r.y, ipm ? (r.rpm === 500 ? VP.rapid : VP.note) : VP.feed, 3, 'center');
+    D.text(ipm ? 'F12.' : 'F0.006', 69, r.y, VP.feed, TYPE.value, 'left', 600);
+    /* the verdict goes under its own bar, not alongside the feed word */
+    D.chip(ipm ? (r.rpm === 500 ? 'heavy chip' : 'thin chip') : 'same chip', 53, r.y + 7.5,
+      { col: ipm ? (r.rpm === 500 ? VP.rapid : VP.note) : VP.feed, size:TYPE.small });
   });
   D.line(6, 35, 94, 35, VP.grid2, .35);
   D.caption(ipm ? 'change the speed and the chip load changes with it' : 'chip load holds when the spindle speed moves');
@@ -1325,15 +1525,16 @@ program(D, t, o){
     const stopped = (k === 'm00' && ptr === 2) || (k === 'm01' && lamp && ptr === 2);
     D.caption(stopped ? 'held — spindle and coolant off, cycle start to carry on'
       : k === 'm01' ? (lamp ? 'lamp on: the stop happens' : 'lamp off: straight past it')
-      : k === 'm30' ? 'rewound and ready for the next part' : 'running');
+      : k === 'm30' ? 'rewound and ready for the next part'
+      : 'the block pointer works down the program');
   }
 },
 
 /* --- M03 / M04 / M05 / M13-M15 / M19 / M20 : spindle --- */
 spindle(D, t, o){
   const dir = o.dir;
-  D.title(dir > 0 ? 'M03 — FORWARD, SEEN LOOKING DOWN AT THE TOOL'
-    : dir < 0 ? 'M04 — REVERSE' : o.orient ? 'M19 — HELD ON ORIENT' : o.orient === false ? 'M20 — FREE TO TURN' : 'M05 — STOPPED');
+  D.title(dir > 0 ? 'M03 — SPINDLE FORWARD'
+    : dir < 0 ? 'M04 — SPINDLE REVERSE' : o.orient ? 'M19 — HELD ON ORIENT' : o.orient === false ? 'M20 — FREE TO TURN' : 'M05 — SPINDLE STOPPED');
   const cx = 40, cy = 36, R = 17;
   const sp = dir === 0 ? 0 : t * Math.PI * 2 * dir * 2;
   D.circle(cx, cy, R + 5, 'rgba(255,255,255,.03)', VP.edge, .5);
@@ -1348,16 +1549,16 @@ spindle(D, t, o){
   if (dir !== 0){
     const a0 = -1.2, a1 = a0 + dir * 2.6;
     D.arcArrow(cx, cy, R + 9, dir > 0 ? a0 : a1, dir > 0 ? a1 : a0, VP.feed, .7, 3);
-    D.text(dir > 0 ? 'CW' : 'CCW', cx, cy - R - 13, VP.feed, 3.4, 'center', 600);
-  } else {
-    D.text('0 rpm', cx, cy - R - 13, VP.ink2, 3.4, 'center', 600);
   }
   if (o.orient){
     const a = -Math.PI / 2;
     D.line(cx, cy, cx + (R + 4) * Math.cos(a), cy + (R + 4) * Math.sin(a), VP.note, .8);
     D.circle(cx + (R + 4) * Math.cos(a), cy + (R + 4) * Math.sin(a), 2.2, VP.note, null);
-    D.text('drive key held', cx, cy + R + 11, VP.note, 3, 'center');
   }
+  /* one status chip under the dial, clear of the heading band */
+  D.chip(dir > 0 ? 'CW looking down' : dir < 0 ? 'CCW looking down'
+       : o.orient ? 'held on the key' : o.orient === false ? 'free to turn' : 'stopped — 0 rpm',
+    cx, cy + R + 9, { col: dir !== 0 ? VP.feed : o.orient ? VP.note : VP.ink2 });
   if (o.coolant !== undefined){
     const on = !!o.coolant;
     D.rect(70, 14, 22, 40, 'rgba(255,255,255,.03)', VP.edge, .5);
@@ -1368,10 +1569,12 @@ spindle(D, t, o){
       const yy = 42 + ((t * 20 + i * 3) % 10);
       D.line(81 - 3 + i * 2, yy, 81 - 3 + i * 2, yy + 2, VP.feed, .45);
     }
-    D.text('one word, both jobs', 81, 60, VP.note, 2.9, 'center');
+    D.chip('one word, both jobs', 81, 60, { col:VP.note, size:TYPE.small });
   }
   D.caption(o.coolant !== undefined ? 'only one M code per block — this is why the combined codes exist'
-    : dir === 0 && o.orient === undefined ? 'get the tool clear before you stop the spindle' : 'give it an S word');
+    : dir === 0 && o.orient === undefined ? 'get the tool clear before you stop the spindle'
+    : o.orient !== undefined ? 'the spindle is parked on its key, not just stopped'
+    : 'the M word picks the direction, the S word sets the speed: S2400 M0' + (dir > 0 ? '3' : '4'));
 },
 
 /* --- M08 / M09 / M51-M54 : coolant --- */
@@ -1393,7 +1596,8 @@ coolant(D, t, o){
       D.line(44 - i, yy, 42 - i, yy + 3, VP.feed, .5);
       D.line(56 + i, yy, 58 + i, yy + 3, VP.feed, .5);
     }
-    D.text(on ? 'coolant reaches the point' : 'flood never gets down here', 50, 68, on ? VP.feed : VP.rapid, 3.1, 'center');
+    D.chip(on ? 'coolant reaches the point' : 'flood never gets down here', 50, 63.5,
+      { col: on ? VP.feed : VP.rapid });
   } else {
     const nz = kind === 'flush' ? [[16, 40], [84, 40]] : [[36, 26], [64, 26]];
     nz.forEach(n2 => {
@@ -1411,7 +1615,7 @@ coolant(D, t, o){
       const u = ((t * 1.2 + i / 6) % 1);
       D.line(20 + u * 60, 46 - Math.sin(u * 3.1) * 3, 22 + u * 60, 47 - Math.sin(u * 3.1) * 3, VP.note, .5);
     }
-    D.text(on ? 'flowing' : 'dry', 50, 68, on ? VP.feed : VP.ink2, 3.2, 'center', 600);
+    D.chip(on ? 'flowing' : 'dry', 50, 63.5, { col: on ? VP.feed : VP.ink2, weight:700 });
   }
   D.caption(kind === 'flush' ? 'housekeeping, not cutting' : kind === 'thru' ? 'the tool needs a hole through it' : 'in cast iron, dry is often the right answer');
 },
@@ -1429,7 +1633,7 @@ rotary(D, t, o){
   }
   D.line(cx, cy, cx + (R - 5) * Math.cos(ang), cy + (R - 5) * Math.sin(ang), VP.partLine, .8);
   D.circle(cx, cy, 2.4, VP.partLine, null);
-  D.text('A axis', cx, cy + R + 7, VP.ink2, 3, 'center');
+  D.chip('A axis', cx, cy + R + 6, { col:VP.ink2, size:TYPE.small });
   [[-1, 0], [1, 0]].forEach(d => {
     const gap = cl ? 0 : 4;
     const jx = cx + d[0] * (R + 5 + gap);
@@ -1472,7 +1676,7 @@ rigidtap(D, t){
     const a = rot + i * Math.PI / 4;
     D.line(cx + (R - 4) * Math.cos(a), cy + (R - 4) * Math.sin(a), cx + R * Math.cos(a), cy + R * Math.sin(a), VP.tool, .6);
   }
-  D.text('SPINDLE', cx, cy + R + 6, VP.ink2, 2.9, 'center', 600);
+  D.chip('SPINDLE', cx, cy + R + 9, { col:VP.ink2, size:TYPE.small });
   D.arcArrow(cx, cy, R + 5, -1.2, 1.4, VP.feed, .55, 2.6);
   const zTop = 16, zBot = 56, k = t < .5 ? t * 2 : 2 - t * 2;
   const z = zTop + (zBot - zTop) * k;
@@ -1480,9 +1684,11 @@ rigidtap(D, t){
   D.poly([[69, z], [75, z], [75, z + 4], [69, z + 4]], VP.tool, .5, null, 'rgba(242,179,61,.5)', true);
   D.text('Z', 72, zTop - 5, VP.ink2, 3, 'center', 600);
   D.arrow(72 + 8, z + 2, 72 + 8, z + 2 + (t < .5 ? 7 : -7), VP.feed, .5, 2.2);
-  D.line(cx + R + 12, 30, 64, 30, VP.feed, .6, [2, 2]);
-  D.circle((cx + R + 12 + 64) / 2, 30, 4.5, 'rgba(63,194,176,.18)', VP.feed, .6);
-  D.text('LOCK', (cx + R + 12 + 64) / 2, 30, VP.feed, 2.4, 'center', 700);
+  const lx = (cx + R + 12 + 64) / 2;
+  D.line(cx + R + 12, 30, lx - 7, 30, VP.feed, .6, [2, 2]);
+  D.line(lx + 7, 30, 64, 30, VP.feed, .6, [2, 2]);
+  D.circle(lx, 30, 6.4, 'rgba(63,194,176,.18)', VP.feed, .6);
+  D.text('LOCK', lx, 30, VP.feed, TYPE.small, 'center', 700);
   D.caption('the tap is driven, not floating — write M29 in the block before G84');
 },
 

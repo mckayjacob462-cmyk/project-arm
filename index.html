@@ -356,6 +356,13 @@ input.search{
 @media (max-width:760px){ .detail{grid-template-columns:1fr} .row{grid-template-columns:70px 1fr}
   .row .rm{display:none} }
 .detail .col{display:flex; flex-direction:column; gap:11px; min-width:0}
+.words-wrap > b{font-family:"Archivo",sans-serif; font-stretch:90%; text-transform:uppercase;
+  letter-spacing:.11em; font-size:10.5px; color:var(--ink-3); display:block; margin-bottom:6px}
+.words{display:grid; grid-template-columns:auto 1fr; gap:4px 12px; margin:0; align-items:baseline}
+.words + .words{margin-top:8px; padding-top:8px; border-top:1px dashed var(--line)}
+.words dt{font-family:"IBM Plex Mono",monospace; font-size:13px; font-weight:600; color:var(--accent); white-space:nowrap}
+.words dd{margin:0; font-size:13.5px; color:var(--ink-2); line-height:1.45}
+.words dd.cmt{grid-column:1/-1; color:var(--ink-3); font-style:italic}
 .note{
   border:1px solid var(--line-2); border-left:3px solid var(--accent); background:var(--surface);
   padding:11px 14px; margin:14px 15px; border-radius:var(--r); font-size:14px; color:var(--ink-2);
@@ -876,6 +883,17 @@ function refHTML(){
   }).join('');
 }
 
+/* every word of the sample block, named */
+function refWords(c){
+  const lines = explainBlock(c.blk);
+  if (!lines.length) return '';
+  return '<div class="words-wrap"><b>What each word says</b>' + lines.map(l =>
+    '<dl class="words">' +
+      l.parts.map(w => '<dt>' + esc(w.word) + '</dt><dd>' + esc(w.note) + '</dd>').join('') +
+      (l.comment ? '<dd class="cmt">' + esc(l.comment) + '</dd>' : '') +
+    '</dl>').join('') + '</div>';
+}
+
 function closeRef(){
   if (refDemo){ refDemo.stop(); refDemo = null; }
   const d = document.querySelector('.detail');
@@ -895,6 +913,7 @@ function openRef(row){
   d.innerHTML = '<div class="col">' +
       '<p class="plain">' + esc(c.plain) + '</p>' +
       '<pre class="block">' + hiBlock(c.blk) + '</pre>' +
+      refWords(c) +
       '<p class="tip"><b>On the floor</b>' + esc(c.tip) + '</p>' +
     '</div><div class="col" id="ref-vp"></div>';
   row.insertAdjacentElement('afterend', d);

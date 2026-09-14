@@ -248,6 +248,15 @@ pre.block{
 }
 pre.block .w{color:var(--accent); font-weight:600}
 pre.block .c{color:var(--ink-3)}
+
+/* what each word in the sample is for — the thing beginners actually get
+   stuck on is which letter means what, not what the block does */
+.words{display:grid; grid-template-columns:auto 1fr; gap:5px 12px; margin:0; align-items:baseline}
+.words + .words{margin-top:9px; padding-top:9px; border-top:1px dashed var(--line)}
+.words dt{font-family:var(--mono); font-size:12.5px; font-weight:600; color:var(--accent); white-space:nowrap}
+.words dd{margin:0; font-size:12.5px; color:var(--ink-2); line-height:1.45}
+.words dd.cmt{grid-column:1/-1; color:var(--ink-3); font-style:italic}
+.words-head{font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-3); margin-top:2px}
 .caption{font-size:12.5px; color:var(--ink-3); text-align:center; line-height:1.45}
 
 /* ---------- demo viewport (used by engine.js mountDemo) ---------- */
@@ -898,14 +907,35 @@ function detailRowsHTML(c, idPrefix){
     '</div></div>' +
     '<div class="row"><span class="badge">' + ico('term') + '</span><div class="body">' +
       '<h3>Example of Use</h3><pre class="block">' + hiBlock(c.blk) + '</pre>' +
+      wordsHTML(c) +
     '</div></div>' +
     '<div class="row"><span class="badge">' + ico('visual') + '</span><div class="body">' +
       '<h3>Visual of What It Does</h3>' + vis +
-      '<p class="caption">' + esc(c.desc) + '</p>' +
+      (viewNote(c) ? '<p class="caption">' + esc(viewNote(c)) + '</p>' : '') +
     '</div></div>' +
     (APP.tips ? '<div class="row tip"><span class="badge">' + ico('tip') + '</span><div class="body">' +
       '<h3>On the Floor</h3><p>' + esc(c.tip) + '</p></div></div>' : '');
 }
+/* which way you are looking. The schematics caption themselves inside the
+   frame; the toolpath views need to say which plane they are. */
+function viewNote(c){
+  if (c.demo.k !== 'gc') return '';
+  return c.demo.view === 'xy' ? 'Looking down on the table \u2014 X across, Y up the screen.'
+       : c.demo.view === 'xz' ? 'Looking at the machine from the front \u2014 X across, Z up and down.'
+       : 'The same move from above and from the front.';
+}
+
+/* the sample block, read one word at a time */
+function wordsHTML(c){
+  const lines = explainBlock(c.blk);
+  if (!lines.length) return '';
+  return '<p class="words-head">What each word says</p>' + lines.map(l =>
+    '<dl class="words">' +
+      l.parts.map(w => '<dt>' + esc(w.word) + '</dt><dd>' + esc(w.note) + '</dd>').join('') +
+      (l.comment ? '<dd class="cmt">' + esc(l.comment) + '</dd>' : '') +
+    '</dl>').join('');
+}
+
 function wireShowVis(scope, idPrefix){
   scope.querySelectorAll('[data-showvis]').forEach(b => b.addEventListener('click', () => {
     const c = BY_CODE[b.dataset.showvis];
