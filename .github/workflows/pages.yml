@@ -1,0 +1,38 @@
+# Publish the app to GitHub Pages on every push.
+#
+# One-time setup: Settings -> Pages -> Source -> "GitHub Actions".
+# After that this runs itself and the site is live at
+# https://<owner>.github.io/project-arm/
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [claude/mcode-gcode-flashcards-z9pj55]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# let a run in progress finish; queue at most one behind it
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # there is no build: the site is the repository
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+      - id: deploy
+        uses: actions/deploy-pages@v4

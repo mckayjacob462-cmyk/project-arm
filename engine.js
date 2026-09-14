@@ -2,8 +2,8 @@
 /* =======================================================================
    Rapid Traverse — shared engine
    The deck, the G-code interpreter, the canvas renderers, the schematics
-   and the demo player. Loaded by index.html (Drill / Simulator / Reference)
-   and by study.html (the pocket study app), so the 63 cards and their
+   and the demo player. Loaded by index.html (the pocket app) and by
+   trainer.html (Drill / Simulator / Reference), so the 63 cards and their
    animated demos have exactly one source.
 
    Sections:  1 DECK DATA  ·  2 G-CODE INTERPRETER  ·  3 CANVAS RENDERERS
