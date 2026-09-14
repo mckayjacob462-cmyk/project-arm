@@ -344,6 +344,7 @@ input.search{
   padding:7px 15px; border-top:1px solid var(--line); cursor:pointer; background:transparent;
   appearance:none; border-left:0; border-right:0; border-bottom:0; width:100%; text-align:left;
 }
+.row[hidden],.grp[hidden]{display:none}
 .row:hover{background:var(--surface-2)}
 .row .rc{font-family:"IBM Plex Mono",monospace; font-weight:600; font-size:15px; color:var(--accent)}
 .row .rd{font-size:14.5px; color:var(--ink)}
@@ -492,6 +493,7 @@ footer .mono{font-size:11px; letter-spacing:.06em}
 <footer class="wrap">
   <p>Card text follows the two code sheets for the Hardinge VMC with Fanuc 0i&#8209;18M control; the plain-English notes, cautions and animations are added for study. Behaviour of a canned cycle or an option code can differ between machines &mdash; the control at the machine is the authority.</p>
   <p class="mono">RIT0292a-Schwenzer (1) &nbsp;&middot;&nbsp; RIT0293a-Schwenzer (1)</p>
+  <p><a href="study.html" style="color:var(--accent)">CNC Study</a> is the same deck as a pocket app &mdash; flashcards you swipe, a browser, a timed round and your progress.</p>
 </footer>
 
 <script src="engine.js"></script>
@@ -518,15 +520,25 @@ function saveProgress(){ try { localStorage.setItem(LS_KEY, JSON.stringify(PROG)
 let PROG = loadProgress();
 const boxOf = c => PROG.boxes[c] || 0;
 
+/* Fisher-Yates. sort(() => Math.random() - .5) is not a shuffle: it leaves
+   the first and last slots far likelier than the middle two. */
+function shuffled(arr){
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    const t = a[i]; a[i] = a[j]; a[j] = t;
+  }
+  return a;
+}
+
 const S = { deck:'all', cat:'all', mode:'flip', queue:[], open:false, streak:0, picked:null, demo:null, order:null };
 
 function deckCards(){
   return CARDS.filter(c => (S.deck === 'all' || c.f === S.deck) && (S.cat === 'all' || c.cat === S.cat));
 }
 function buildQueue(shuffle){
-  const list = deckCards().slice();
-  list.forEach(c => { c._r = Math.random(); });
-  list.sort((a, b) => shuffle ? a._r - b._r : (boxOf(a.c) - boxOf(b.c)) || (a._r - b._r));
+  const list = shuffled(deckCards());
+  if (!shuffle) list.sort((a, b) => boxOf(a.c) - boxOf(b.c));
   S.queue = list.filter(c => boxOf(c.c) < 5).map(c => c.c);
   if (!S.queue.length) S.queue = list.map(c => c.c);
   S.open = false; S.picked = null; S.order = null; S.answered = null;
@@ -598,7 +610,7 @@ function choicesHTML(c){
     const pick = [];
     const grab = arr => { while (arr.length && pick.length < 3){ pick.push(arr.splice(Math.floor(Math.random() * arr.length), 1)[0]); } };
     grab(same.slice()); grab(rest.slice());
-    S.order = pick.concat([c]).sort(() => Math.random() - .5);
+    S.order = shuffled(pick.concat([c]));
   }
   return '<div class="choices">' + S.order.map((x, i) =>
     '<button class="choice" data-pick="' + esc(x.c) + '"><b>' + 'ABCD'[i] + '</b>' + esc(x.desc) + '</button>').join('') + '</div>';
@@ -706,7 +718,7 @@ const PRESETS = [
 ];
 
 const SIM = { run:null, t:0, playing:false, speed:1, preset:0, raf:0,
-              padXY:null, padXZ:null, stock:null };
+              padXY:null, padXZ:null, stock:null, rows:null, lit:null };
 
 function simEls(){
   return { src: document.getElementById('src'), rows: document.getElementById('editor-rows'),
@@ -727,6 +739,7 @@ function simCompile(){
   e.err.textContent = SIM.run.err || '';
   e.rows.innerHTML = SIM.run.lines.map((l, i) =>
     '<div class="erow" data-l="' + i + '"><span class="n">' + (i + 1) + '</span><span>' + (hiRow(l.raw) || '&nbsp;') + '</span></div>').join('');
+  SIM.rows = null; SIM.lit = null;
   SIM.t = 0;
   e.scrub.value = 0;
   simFrame(true);
@@ -771,13 +784,14 @@ function simFrame(force){
     setDro('MODE', (st.abs ? 'G90' : 'G91') + (st.cyc ? ' \u00b7 G' + st.ret : ''));
     setDro('COOL', st.cool === 2 ? 'thru' : st.cool ? 'flood' : 'off', st.cool ? 'on' : 'off');
   }
-  const rows = document.querySelectorAll('.erow');
-  rows.forEach(el => el.classList.remove('active'));
-  if (seg && rows[seg.line]){
-    rows[seg.line].classList.add('active');
+  const rows = SIM.rows || (SIM.rows = document.querySelectorAll('.erow'));
+  const want = seg ? rows[seg.line] : null;
+  if (SIM.lit && SIM.lit !== want){ SIM.lit.classList.remove('active'); SIM.lit = null; }
+  if (want){
+    if (SIM.lit !== want){ want.classList.add('active'); SIM.lit = want; }
     if (SIM.playing || force){
       const box = document.getElementById('editor-rows');
-      const top = rows[seg.line].offsetTop - box.clientHeight / 2;
+      const top = want.offsetTop - box.clientHeight / 2;
       if (Math.abs(box.scrollTop - top) > 30) box.scrollTop = top;
     }
   }
@@ -806,7 +820,7 @@ function loadPreset(i){
   document.getElementById('src').value = PRESETS[i].src;
   document.querySelectorAll('.preset').forEach((b, j) => b.setAttribute('aria-pressed', j === i ? 'true' : 'false'));
   simCompile();
-  SIM.t = 0; setPlaying(true);
+  SIM.t = 0; setPlaying(!REDUCED);
 }
 
 function initSim(){

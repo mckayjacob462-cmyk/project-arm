@@ -79,6 +79,7 @@ h1,h2,h3,h4,p{margin:0; text-wrap:pretty}
 }
 .appbar{
   position:sticky; top:0; z-index:30;
+  background:var(--bg-top);
   background:color-mix(in srgb,var(--bg-top) 88%, transparent);
   backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
   border-bottom:1px solid transparent; transition:border-color .2s;
@@ -103,6 +104,7 @@ main{flex:1 0 auto; padding:4px 16px calc(var(--tabh) + 26px + env(safe-area-ins
 /* ---------- tab bar ---------- */
 .tabbar{
   position:fixed; left:0; right:0; bottom:0; z-index:40;
+  background:var(--surface);
   background:color-mix(in srgb,var(--surface) 94%, transparent);
   backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
   border-top:1px solid var(--line);
@@ -153,6 +155,21 @@ main{flex:1 0 auto; padding:4px 16px calc(var(--tabh) + 26px + env(safe-area-ins
 .chip:active{transform:scale(.96)}
 .chip[aria-pressed="true"]{background:var(--accent); border-color:var(--accent); color:var(--accent-ink)}
 .chip.push{margin-left:auto}
+
+/* shown only while the deck is narrowed to a hand-picked set of codes,
+   because otherwise there is no obvious way back to all 63 */
+.focusbar[hidden]{display:none}
+.focusbar{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  padding:9px 14px; border-radius:12px; font-size:13px; font-weight:600; letter-spacing:-.01em;
+  background:var(--accent-soft); border:1px solid var(--accent-line); color:var(--accent);
+}
+.focusbar svg{width:15px; height:15px; flex:none; vertical-align:-2px; margin-right:3px}
+.focusbar .linkbtn{
+  margin-left:auto; appearance:none; border:0; background:transparent; cursor:pointer;
+  color:inherit; font:inherit; padding:2px 0; text-decoration:underline; text-underline-offset:3px;
+}
+.focusbar .linkbtn:hover{opacity:.75}
 
 /* ---------- flash card ---------- */
 .deck{position:relative; perspective:1200px; touch-action:pan-y}
@@ -499,6 +516,11 @@ pre.block .c{color:var(--ink-3)}
     <button class="chip push" type="button" id="btn-shuffle">Shuffle</button>
   </div>
 
+  <div class="focusbar" id="s-focus" hidden>
+    <span id="s-focus-label"></span>
+    <button class="linkbtn" type="button" id="s-focus-clear">Back to all codes</button>
+  </div>
+
   <div class="deck" id="deck"></div>
 
   <div class="swipe" id="swipe">
@@ -592,7 +614,7 @@ pre.block .c{color:var(--ink-3)}
     <div class="about">
       <p>63 G and M codes for the <b>Hardinge VMC with Fanuc&nbsp;0i&#8209;18M</b> control, taken from the two RIT shop sheets (RIT0292a&#8209;Schwenzer, RIT0293a&#8209;Schwenzer).</p>
       <p>Card text follows the sheets. The plain-English notes, the cautions and the animations are study material written around them &mdash; a canned cycle or an option code can behave differently on another machine, and the control at the machine is the authority.</p>
-      <p><a href="index.html">Open the full trainer</a> for the program simulator and the searchable reference.</p>
+      <p><a href="index.html" target="_blank" rel="noopener">Open the full trainer</a> for the program simulator and the searchable reference.</p>
     </div>
   </div>
 </section>
@@ -687,10 +709,21 @@ if (!APP.game) APP.game = { best:0, plays:0, bestStreak:0 };
 function saveProg(){ try { localStorage.setItem(LS_BOXES, JSON.stringify(PROG)); } catch (e){} }
 function saveApp(){  try { localStorage.setItem(LS_APP,  JSON.stringify(APP));  } catch (e){} }
 
+/* Fisher-Yates. A sort() with a random comparator is not a shuffle: it
+   leaves the first and last slots far likelier than the middle two, which
+   on a four-option question is a tell worth playing. */
+function shuffled(arr){
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    const t = a[i]; a[i] = a[j]; a[j] = t;
+  }
+  return a;
+}
+
 const boxOf     = c => PROG.boxes[c] || 0;
 const isMaster  = c => boxOf(c) >= 5;
 const isTouched = c => !!APP.touched[c] || boxOf(c) > 0;
-const isLearn   = c => isTouched(c) && !isMaster(c);
 function tally(list){
   let m = 0, l = 0;
   list.forEach(c => { if (isMaster(c.c)) m++; else if (isTouched(c.c)) l++; });
@@ -772,6 +805,12 @@ const current = () => BY_CODE[S.queue[0]];
 function stopDemo(){ if (S.demo){ S.demo.stop(); S.demo = null; } }
 
 function paintStudyHead(){
+  const fb = $('#s-focus');
+  fb.hidden = !S.only;
+  if (S.only){
+    $('#s-focus-label').innerHTML = ico('target') +
+      ' Focused on ' + S.only.length + ' code' + (S.only.length === 1 ? '' : 's');
+  }
   const t = tally(deckCards());
   const done = t.mastered + t.learning;
   $('#s-count').textContent = done + ' / ' + t.total;
@@ -802,6 +841,7 @@ function cardFaceHTML(c){
 }
 
 function renderCard(){
+  const hadFocus = document.activeElement && document.activeElement.id === 'fcard';
   stopDemo();
   const deck = $('#deck');
   paintStudyHead();
@@ -811,6 +851,7 @@ function renderCard(){
     'aria-label="Flash card ' + esc(c.c) + ' — activate to reveal the answer">' + cardFaceHTML(c) + '</article>';
   $('#swipe').hidden = false;
   wireCard($('#fcard'));
+  if (hadFocus) $('#fcard').focus();
   if (S.open) mountDetail(); else { $('#s-detail').hidden = true; $('#s-rows').innerHTML = ''; }
 }
 
@@ -830,6 +871,7 @@ function renderCleared(){
     '</div>';
   $('#swipe').hidden = true;
   $('#s-detail').hidden = true;
+  $('#s-rows').innerHTML = '';
   $('#deck').querySelectorAll('[data-act]').forEach(b => b.addEventListener('click', () => {
     if (b.dataset.act === 'full'){ S.only = null; }
     buildQueue(true); renderCard();
@@ -871,7 +913,8 @@ function mountDetail(){
   wrap.hidden = false;
   rows.innerHTML = detailRowsHTML(c, 's');
   stopDemo();
-  if (APP.visuals) S.demo = mountDemo($('#s-vp'), c.demo);
+  const pane = $('#s-vp');
+  if (APP.visuals && pane) S.demo = mountDemo(pane, c.demo);
   wireShowVis(rows, 's');
 }
 
@@ -879,8 +922,11 @@ function mountDetail(){
 function reveal(){
   if (S.open || !S.queue.length) return;
   S.open = true;
-  const card = $('#fcard');
-  if (card){ card.innerHTML = cardFaceHTML(current()); }
+  const c = current(), card = $('#fcard');
+  if (card){
+    card.innerHTML = cardFaceHTML(c);
+    card.setAttribute('aria-label', c.c + ' — ' + c.desc + '. Swipe or use the arrow keys to grade.');
+  }
   mountDetail();
 }
 
@@ -914,9 +960,11 @@ function wireCard(card){
     if (id === null || e.pointerId !== id) return;
     dx = e.clientX - x0;
     const dy = e.clientY - y0;
-    if (lock === null && (Math.abs(dx) > 7 || Math.abs(dy) > 7)) lock = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+    if (lock === null && (Math.abs(dx) > 7 || Math.abs(dy) > 7)){
+      lock = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+      moved = true;                       /* either axis counts as a drag */
+    }
     if (lock !== 'x') return;
-    moved = true;
     if (e.cancelable) e.preventDefault();
     setDrag(card, dx);
   });
@@ -932,7 +980,10 @@ function wireCard(card){
   card.addEventListener('pointerup', end);
   card.addEventListener('pointercancel', e => { if (id !== null){ id = null; clearDrag(card); } });
   card.addEventListener('keydown', e => {
-    if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); S.open ? grade('good') : reveal(); }
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();
+    e.stopPropagation();                  /* or the document handler reveals the next card */
+    if (!S.open) reveal();
   });
 }
 
@@ -1000,6 +1051,8 @@ function paintBrowse(){
   if (B.demo){ B.demo.stop(); B.demo = null; }
   const body = $('#b-body');
   const list = browseList();
+  /* a filter or a search can drop the row that is open */
+  if (B.open && !list.some(c => c.c === B.open)) B.open = null;
   if (!list.length){
     body.innerHTML = '<div class="card"><p class="empty">Nothing matches &ldquo;' + esc(B.q) + '&rdquo;.<br>Try a code, or a word like peck, coolant, arc or offset.</p></div>';
     return;
@@ -1031,11 +1084,13 @@ function paintBrowse(){
   ).join('');
 
   body.querySelectorAll('[data-code]').forEach(b => b.addEventListener('click', () => {
-    B.open = B.open === b.dataset.code ? null : b.dataset.code;
+    const code = b.dataset.code;
+    B.open = B.open === code ? null : code;
     const y = b.getBoundingClientRect().top;
     paintBrowse();
-    const again = body.querySelector('[data-code="' + CSS.escape(b.dataset.code) + '"]');
-    if (again && B.open) window.scrollBy(0, again.getBoundingClientRect().top - y);
+    /* hold the row you tapped still, whether it just opened or just closed */
+    const again = body.querySelector('[data-code="' + CSS.escape(code) + '"]');
+    if (again) window.scrollBy(0, again.getBoundingClientRect().top - y);
   }));
   body.querySelectorAll('[data-study]').forEach(b => b.addEventListener('click', () =>
     studyThese([b.dataset.study], 'Studying ' + b.dataset.study)));
@@ -1068,24 +1123,24 @@ function openInBrowse(code){
 /* ------------------------------- 4 · GAME ----------------------------- */
 /* Code Rush: sixty seconds, three lives, four choices, both directions. */
 
-const G = { on:false, over:false, deck:'all', score:0, streak:0, best:0, lives:3,
-            left:60, t0:0, tick:0, q:null, locked:false, right:0, wrong:0, missed:[], pool:[] };
+const G = { on:false, over:false, paused:false, deck:'all', score:0, streak:0, bestRun:0, lives:3,
+            left:60, t0:0, tick:0, next:0, q:null, locked:false,
+            right:0, wrong:0, missed:[], pool:[] };
 const RUSH_SECONDS = 60;
 
 function gameDeck(){ return CARDS.filter(c => G.deck === 'all' || c.f === G.deck); }
 
 function newQuestion(){
   const deck = gameDeck();
-  if (!G.pool.length) G.pool = deck.map(c => c.c).sort(() => Math.random() - .5);
-  const code = G.pool.shift();
-  const c = BY_CODE[code];
+  if (!G.pool.length) G.pool = shuffled(deck.map(c => c.c));
+  const c = BY_CODE[G.pool.shift()];
   const dir = Math.random() < .5 ? 'toDesc' : 'toCode';
   const pool = deck.filter(x => x.c !== c.c);
-  const same = pool.filter(x => x.cat === c.cat).sort(() => Math.random() - .5);
-  const rest = pool.filter(x => x.cat !== c.cat).sort(() => Math.random() - .5);
+  const same = shuffled(pool.filter(x => x.cat === c.cat));
+  const rest = shuffled(pool.filter(x => x.cat !== c.cat));
   const pick = same.slice(0, 3);
   while (pick.length < 3 && rest.length) pick.push(rest.shift());
-  G.q = { card:c, dir:dir, opts:pick.concat([c]).sort(() => Math.random() - .5) };
+  G.q = { card:c, dir:dir, opts:shuffled(pick.concat([c])) };
   G.locked = false;
 }
 
@@ -1179,11 +1234,20 @@ function paintGameOver(body){
 }
 
 function startGame(){
+  stopClocks();
   G.on = true; G.over = false; G.score = 0; G.streak = 0; G.bestRun = 0; G.lives = 3;
   G.left = RUSH_SECONDS; G.right = 0; G.wrong = 0; G.missed = []; G.pool = [];
   newQuestion();
   paintGame();
   startTick();
+}
+
+/* every exit from a round goes through here, so no interval and no pending
+   question hand-off can outlive the round that started it */
+function stopClocks(){
+  clearInterval(G.tick); G.tick = 0;
+  clearTimeout(G.next);  G.next = 0;
+  G.paused = false;
 }
 
 function startTick(){
@@ -1204,6 +1268,7 @@ function startTick(){
 function pauseGame(){
   if (G.on && G.tick){ clearInterval(G.tick); G.tick = 0; G.paused = true; }
 }
+function abandonGame(){ stopClocks(); G.on = false; G.over = false; }
 function resumeGame(){
   if (G.on && G.paused) startTick();
 }
@@ -1229,7 +1294,9 @@ function answer(code){
   }
   const scoreEl = $('#g-score');
   if (scoreEl) scoreEl.textContent = G.score;
-  setTimeout(() => {
+  clearTimeout(G.next);
+  G.next = setTimeout(() => {
+    G.next = 0;
     if (!G.on) return;
     if (G.lives <= 0 || G.left <= 0){ endGame(); return; }
     newQuestion(); paintGame();
@@ -1238,7 +1305,7 @@ function answer(code){
 
 function endGame(){
   if (!G.on) return;
-  clearInterval(G.tick); G.tick = 0;
+  stopClocks();
   G.on = false; G.over = true;
   const g = APP.game;
   g.plays = (g.plays || 0) + 1;
@@ -1332,7 +1399,8 @@ function wireSettings(){
   $('#set-reset-game').addEventListener('click', () => {
     if (!window.confirm('Clear the Code Rush high score and round count?')) return;
     APP.game = { best:0, plays:0, bestStreak:0 }; saveApp();
-    G.over = false; G.on = false;
+    abandonGame();
+    if (S.tab === 'game') paintGame();
     toast('Game scores cleared');
     paintProgress();
   });
@@ -1362,6 +1430,7 @@ $('#btn-gear').addEventListener('click', () => go(S.tab === 'settings' ? 'study'
 TABS.forEach(t => document.getElementById('tab-' + t.id).addEventListener('click', () => go(t.id)));
 
 $$('.chips [data-deck]').forEach(b => b.addEventListener('click', () => setDeck(b.dataset.deck)));
+$('#s-focus-clear').addEventListener('click', () => { setDeck(S.deck); toast('Back to the full deck'); });
 $('#btn-shuffle').innerHTML = ico('shuffle') + 'Shuffle';
 $('#btn-shuffle').addEventListener('click', () => { buildQueue(true); renderCard(); toast('Deck shuffled'); });
 
@@ -1376,7 +1445,12 @@ $('#swipe').querySelectorAll('[data-grade]').forEach(b => {
 });
 
 $('#b-search').insertAdjacentHTML('beforebegin', ico('search'));
-$('#b-search').addEventListener('input', e => { B.q = e.target.value; B.open = null; paintBrowse(); });
+let searchT = 0;
+$('#b-search').addEventListener('input', e => {
+  B.q = e.target.value; B.open = null;
+  clearTimeout(searchT);
+  searchT = setTimeout(paintBrowse, 110);
+});
 $$('[data-bdeck]').forEach(b => b.addEventListener('click', () => {
   B.filter = b.dataset.bdeck; B.open = null;
   $$('[data-bdeck]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
@@ -1385,13 +1459,33 @@ $$('[data-bdeck]').forEach(b => b.addEventListener('click', () => {
 
 /* keyboard, for anyone studying at a desk */
 document.addEventListener('keydown', e => {
-  if (S.tab !== 'study' || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
   const el = document.activeElement;
   if (el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return;
-  if (e.key === ' '){ e.preventDefault(); S.open ? null : reveal(); }
-  else if (e.key === 'ArrowRight'){ e.preventDefault(); const c = $('#fcard'); if (c && !S.busy) fly(c, 1); }
-  else if (e.key === 'ArrowLeft'){ e.preventDefault(); const c = $('#fcard'); if (c && !S.busy) fly(c, -1); }
-  else if (e.key === 's' || e.key === 'S'){ buildQueue(true); renderCard(); }
+
+  if (S.tab === 'game'){
+    if (!G.on || G.locked) return;
+    const i = 'abcd'.indexOf(e.key.toLowerCase());
+    if (i < 0) return;
+    const btn = $$('#g-body [data-pick]')[i];
+    if (btn && !btn.disabled){ e.preventDefault(); btn.click(); }
+    return;
+  }
+
+  if (S.tab !== 'study') return;
+  const card = $('#fcard');
+  if (e.key === ' '){
+    if (S.open) return;                   /* leave the spacebar to scroll the answer */
+    e.preventDefault(); reveal();
+  } else if (e.key === 'ArrowRight'){
+    if (!card || S.busy) return;
+    e.preventDefault(); fly(card, 1);
+  } else if (e.key === 'ArrowLeft'){
+    if (!card || S.busy) return;
+    e.preventDefault(); fly(card, -1);
+  } else if (e.key === 's' || e.key === 'S'){
+    e.preventDefault(); buildQueue(true); renderCard(); toast('Deck shuffled');
+  }
 });
 
 const bar = $('#appbar');

@@ -68,7 +68,13 @@ block, the animated visual of what the code does to the machine, and the
 shop-floor caution. The strip at the top counts mastered, learning and new
 across whichever deck is filtered — all, G codes or M codes.
 
-`Space` reveals, `←` and `→` grade, `S` shuffles.
+A drag that starts vertically scrolls the page; only a horizontal one
+grades. `Space` reveals, `←` and `→` grade, `S` shuffles, and focus follows
+the card so a whole session runs from the keyboard.
+
+When a deck has been narrowed — from Browse, from the codes that need work,
+or from a round's misses — a bar above the card says so and hands back the
+full 63.
 
 ## Browse
 
@@ -83,8 +89,9 @@ or marked known without drilling it.
 ways: name what a code does, or name the code that does a thing. Distractors
 come from the same family and, where possible, the same functional group. A
 streak multiplies each answer up to 5×; the high score, best streak and round
-count are kept. Anything missed can be handed to the Study tab as a queue of
-exactly those codes. A round pauses if you leave the tab.
+count are kept. `A`–`D` pick without reaching for the screen. Anything missed
+can be handed to the Study tab as a queue of exactly those codes. A round
+pauses if you leave the tab and resumes where it stopped.
 
 ## Progress
 
@@ -113,9 +120,13 @@ publish time. `engine.js` sits next to them as a supporting file. Browsers
 open either file directly — the fonts come from Google Fonts and everything
 else is inline, with no dependencies and no network calls of its own.
 
+Each page links to the other: the trainer's footer opens the pocket app, and
+the pocket app's About section opens the trainer.
+
 Progress lives in `localStorage` under `rapid-traverse-v1`, shared by both
 pages; the pocket app keeps its own settings and game scores under
-`cnc-study-v1`. Nothing leaves the device.
+`cnc-study-v1`. Nothing leaves the device, and either page still starts
+cleanly if that storage is missing or corrupt.
 
 # A caution
 
