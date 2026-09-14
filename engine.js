@@ -655,7 +655,7 @@ function segPoint(s, u){
     }
     acc += d;
   }
-  return s.p[s.p.length - 1];
+  return s.p[s.p.length - 1] || s.p[0] || [0, 0, 0];
 }
 
 /* ----------------------- 3 · CANVAS RENDERERS ---------------------- */
@@ -1112,7 +1112,8 @@ comp(D, t, o){
   const path = [[22, 52], [22, 24], [52, 24], [68, 38], [68, 52]];
   D.poly([[22, 52], [22, 24], [52, 24], [68, 38], [68, 52], [22, 52]], VP.partLine, .6, null, 'rgba(30,42,50,.9)', true);
   D.text('programmed part line', 44, 58, VP.partLine, 3, 'center');
-  const total = path.length - 1, tt = t * total, i = Math.min(total - 1, Math.floor(tt)), u = tt - i;
+  const total = path.length - 1, tt = t * total;
+  const i = Math.max(0, Math.min(total - 1, Math.floor(tt))), u = tt - i;
   const a = path[i], b = path[i + 1];
   const px = a[0] + (b[0] - a[0]) * u, py = a[1] + (b[1] - a[1]) * u;
   const dx = b[0] - a[0], dy = b[1] - a[1], m = Math.hypot(dx, dy) || 1;
@@ -1238,14 +1239,14 @@ absinc(D, t, o){
   D.text('X0 Y0', ox - 2, oy + 5, VP.ink2, 2.9, 'right');
   const pts = abs ? [[0, 0], [1, 1], [2, 2], [3, 3]] : [[0, 0], [1, 1], [2, 2], [3, 3]];
   const words = abs ? ['X1.0 Y1.0', 'X2.0 Y2.0', 'X3.0 Y3.0'] : ['X1.0 Y1.0', 'X1.0 Y1.0', 'X1.0 Y1.0'];
-  const step = Math.min(2, Math.floor(t * 3));
+  const step = Math.max(0, Math.min(2, Math.floor(t * 3)));
   for (let i = 1; i <= step + 1 && i < pts.length; i++){
     const a = pts[i - 1], b = pts[i];
     const done = i <= step;
     D.line(ox + a[0] * u, oy - a[1] * u, ox + b[0] * u, oy - b[1] * u, done ? VP.feed : VP.edge, .7, done ? null : [2, 2]);
   }
   pts.forEach((p, i) => { if (i <= step + 1) D.circle(ox + p[0] * u, oy - p[1] * u, 1.8, i <= step + 1 ? VP.feed : VP.edge, null); });
-  const cp = pts[Math.min(step + 1, 3)];
+  const cp = pts[Math.max(0, Math.min(step + 1, 3))];
   D.circle(ox + cp[0] * u, oy - cp[1] * u, 4, 'rgba(242,179,61,.18)', VP.tool, .6);
   words.forEach((w, i) => D.text(w, 80, 22 + i * 7, i === step ? VP.tool : VP.ink2, 3.2, 'center'));
   D.caption(abs ? 'each block names a point on the part' : 'each block names a distance from the last one');
@@ -1560,12 +1561,12 @@ function mountDemo(pane, demo){
         p.pad.clear();
         const D = design(p.pad);
         const fn = SCHEM[demo.n];
-        if (fn) fn(D, Math.min(0.999, tt / SC_CYCLE), demo.o || {});
+        if (fn) fn(D, Math.max(0, Math.min(0.999, tt / SC_CYCLE)), demo.o || {});
       }
     });
   }
   function frame(now){
-    const el = (now - t0) / 1000;
+    const el = Math.max(0, (now - t0) / 1000);
     if (once){ paint(demo.k === 'gc' ? run.total : SC_CYCLE * 0.62); raf = 0; return; }
     paint(el % cycle);
     raf = requestAnimationFrame(frame);

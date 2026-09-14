@@ -90,8 +90,9 @@ ways: name what a code does, or name the code that does a thing. Distractors
 come from the same family and, where possible, the same functional group. A
 streak multiplies each answer up to 5×; the high score, best streak and round
 count are kept. `A`–`D` pick without reaching for the screen. Anything missed
-can be handed to the Study tab as a queue of exactly those codes. A round
-pauses if you leave the tab and resumes where it stopped.
+can be handed to the Study tab as a queue of exactly those codes. The clock
+stops with the screen — leave the tab or lock the phone and the round is
+waiting where you left it.
 
 ## Progress
 

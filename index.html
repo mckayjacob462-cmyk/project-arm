@@ -771,7 +771,8 @@ function simFrame(force){
   let pos = [0, 0, 0], st = null;
   if (seg){
     const u = seg.dur ? Math.max(0, Math.min(1, (SIM.t - seg.t0) / seg.dur)) : 1;
-    pos = segPoint(seg, SIM.t >= seg.t1 ? 1 : u);
+    const at = segPoint(seg, SIM.t >= seg.t1 ? 1 : u);
+    if (at) pos = at;                   /* a hand-typed program can be degenerate */
     st = seg.st;
   }
   renderRun(SIM.padXY, r, 'xy', SIM.t, SIM.stock, { notes:false });

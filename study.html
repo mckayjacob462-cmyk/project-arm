@@ -193,7 +193,11 @@ main{flex:1 0 auto; padding:4px 16px calc(var(--tabh) + 26px + env(safe-area-ins
 .boxdots i{width:6px; height:6px; border-radius:50%; background:var(--line-2)}
 .boxdots i.on{background:var(--accent)}
 .fcard-mid{flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding:18px 20px 26px; gap:10px}
-.bigcode{font-size:clamp(52px,15vw,66px); font-weight:800; letter-spacing:-.035em; line-height:1; font-family:var(--mono)}
+.bigcode{font-size:clamp(52px,15vw,66px); font-weight:800; letter-spacing:-.035em; line-height:1;
+  font-family:var(--mono); white-space:nowrap; max-width:100%}
+.bigcode.long{font-size:clamp(26px,8vw,40px); letter-spacing:-.03em}
+.bigcode.sm{font-size:38px}
+.bigcode.sm.long{font-size:clamp(20px,6vw,27px)}
 .tapline{font-size:15px; color:var(--ink-3); font-weight:500}
 .answer{font-size:17px; font-weight:600; letter-spacing:-.01em; line-height:1.35; max-width:34ch}
 .answer + .answer-sub{font-size:13.5px; color:var(--ink-2); font-weight:450; line-height:1.5; max-width:40ch}
@@ -283,7 +287,9 @@ pre.block .c{color:var(--ink-3)}
   display:flex; align-items:center; gap:12px; padding:12px 14px; border-bottom:1px solid var(--line); transition:background .12s}
 .item:last-of-type{border-bottom:0}
 .item:hover{background:var(--surface-2)}
-.item .code{font-family:var(--mono); font-size:15px; font-weight:600; width:52px; flex:none; letter-spacing:-.02em}
+.item .code{font-family:var(--mono); font-size:15px; font-weight:600; min-width:52px; flex:none;
+  letter-spacing:-.02em; white-space:nowrap}
+.item .code.long{font-size:12.5px; letter-spacing:-.03em}
 .item .what{flex:1; min-width:0; font-size:13.5px; color:var(--ink-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 .item .pip{width:9px; height:9px; border-radius:50%; flex:none; background:var(--line-2)}
 .item .pip[data-b="1"],.item .pip[data-b="2"]{background:var(--bad)}
@@ -328,7 +334,8 @@ pre.block .c{color:var(--ink-3)}
 .timer > i.low{background:var(--bad)}
 .qcard{background:var(--surface); border:1px solid var(--line); border-radius:var(--r); box-shadow:var(--shadow); padding:20px 18px; text-align:center; display:flex; flex-direction:column; gap:8px; align-items:center}
 .qcard .ask{font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-3)}
-.qcard .q{font-size:clamp(22px,7vw,30px); font-weight:800; letter-spacing:-.02em; line-height:1.2; font-family:var(--mono)}
+.qcard .q{font-size:clamp(22px,7vw,30px); font-weight:800; letter-spacing:-.02em; line-height:1.2;
+  font-family:var(--mono); max-width:100%; overflow-wrap:anywhere}
 .qcard .q.words{font-family:var(--sans); font-size:clamp(17px,5vw,21px); font-weight:650; letter-spacing:-.01em; line-height:1.3}
 .opts{display:flex; flex-direction:column; gap:9px}
 .opt{
@@ -614,7 +621,7 @@ pre.block .c{color:var(--ink-3)}
     <div class="about">
       <p>63 G and M codes for the <b>Hardinge VMC with Fanuc&nbsp;0i&#8209;18M</b> control, taken from the two RIT shop sheets (RIT0292a&#8209;Schwenzer, RIT0293a&#8209;Schwenzer).</p>
       <p>Card text follows the sheets. The plain-English notes, the cautions and the animations are study material written around them &mdash; a canned cycle or an option code can behave differently on another machine, and the control at the machine is the authority.</p>
-      <p><a href="index.html" target="_blank" rel="noopener">Open the full trainer</a> for the program simulator and the searchable reference.</p>
+      <p id="about-trainer"><a href="index.html" target="_blank" rel="noopener">Open the full trainer</a> for the program simulator and the searchable reference.</p>
     </div>
   </div>
 </section>
@@ -821,14 +828,17 @@ function paintStudyHead(){
   $('#s-new').textContent = t.fresh;
 }
 
+const isLongCode = code => code.length > 6;
+
 function cardFaceHTML(c){
   const b = boxOf(c.c);
+  const long = isLongCode(c.c) ? ' long' : '';
   const dots = Array.from({ length:5 }, (_, i) => '<i class="' + (i < b ? 'on' : '') + '"></i>').join('');
   const mid = S.open
-    ? '<div class="bigcode" style="font-size:38px">' + esc(c.c) + '</div>' +
+    ? '<div class="bigcode sm' + long + '">' + esc(c.c) + '</div>' +
       '<p class="answer">' + esc(c.desc) + '</p>' +
       '<p class="answer-sub">' + esc(c.plain) + '</p>'
-    : '<div class="bigcode">' + esc(c.c) + '</div>' +
+    : '<div class="bigcode' + long + '">' + esc(c.c) + '</div>' +
       '<p class="tapline">Tap card to reveal answer</p>';
   return '<div class="fcard-top">' +
       '<span class="tag ' + (c.f === 'G' ? 'g' : 'm') + '">' + (c.f === 'G' ? 'G code' : 'M code') + '</span>' +
@@ -1069,7 +1079,7 @@ function paintBrowse(){
       const isOpen = B.open === c.c;
       return '<button class="item" type="button" data-code="' + esc(c.c) + '" aria-expanded="' + isOpen + '">' +
           '<span class="pip" data-b="' + boxOf(c.c) + '" title="' + (isMaster(c.c) ? 'Mastered' : isTouched(c.c) ? 'Learning' : 'Not started') + '"></span>' +
-          '<span class="code">' + esc(c.c) + '</span>' +
+          '<span class="code' + (isLongCode(c.c) ? ' long' : '') + '">' + esc(c.c) + '</span>' +
           '<span class="what">' + esc(c.desc) + '</span>' +
           ico('chev', 'class="chev"') +
         '</button>' +
@@ -1135,7 +1145,9 @@ function newQuestion(){
   if (!G.pool.length) G.pool = shuffled(deck.map(c => c.c));
   const c = BY_CODE[G.pool.shift()];
   const dir = Math.random() < .5 ? 'toDesc' : 'toCode';
-  const pool = deck.filter(x => x.c !== c.c);
+  /* distractors stay inside the same family: a G question answered with
+     three M codes is one glance to eliminate, which is not a question */
+  const pool = CARDS.filter(x => x.c !== c.c && x.f === c.f);
   const same = shuffled(pool.filter(x => x.cat === c.cat));
   const rest = shuffled(pool.filter(x => x.cat !== c.cat));
   const pick = same.slice(0, 3);
@@ -1352,7 +1364,7 @@ function paintProgress(){
     $('#p-weak').innerHTML = weak.map(c =>
       '<button class="item" type="button" data-weak="' + esc(c.c) + '">' +
         '<span class="pip" data-b="' + boxOf(c.c) + '"></span>' +
-        '<span class="code">' + esc(c.c) + '</span>' +
+        '<span class="code' + (isLongCode(c.c) ? ' long' : '') + '">' + esc(c.c) + '</span>' +
         '<span class="what">' + esc(c.desc) + '</span>' + ico('chev', 'class="chev"') +
       '</button>').join('') +
       '<div class="detail-acts" style="padding:12px 16px">' +
@@ -1430,6 +1442,14 @@ $('#btn-gear').addEventListener('click', () => go(S.tab === 'settings' ? 'study'
 TABS.forEach(t => document.getElementById('tab-' + t.id).addEventListener('click', () => go(t.id)));
 
 $$('.chips [data-deck]').forEach(b => b.addEventListener('click', () => setDeck(b.dataset.deck)));
+/* the trainer link only resolves where this file sits beside index.html;
+   published on its own, this page is the index, so name the file instead */
+if (!/(^|\/)study\.html$/i.test(location.pathname)){
+  $('#about-trainer').innerHTML =
+    'The full trainer \u2014 the program simulator and the searchable reference \u2014 ' +
+    'is <b>index.html</b>, the other page in this project.';
+}
+
 $('#s-focus-clear').addEventListener('click', () => { setDeck(S.deck); toast('Back to the full deck'); });
 $('#btn-shuffle').innerHTML = ico('shuffle') + 'Shuffle';
 $('#btn-shuffle').addEventListener('click', () => { buildQueue(true); renderCard(); toast('Deck shuffled'); });
@@ -1486,6 +1506,13 @@ document.addEventListener('keydown', e => {
   } else if (e.key === 's' || e.key === 'S'){
     e.preventDefault(); buildQueue(true); renderCard(); toast('Deck shuffled');
   }
+});
+
+/* a round should not burn down while the phone is locked or the tab is
+   in the background — the clock stops with the screen */
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) pauseGame();
+  else if (S.tab === 'game') resumeGame();
 });
 
 const bar = $('#appbar');
