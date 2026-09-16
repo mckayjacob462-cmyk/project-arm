@@ -1,6 +1,14 @@
 # The site is the repository — there is nothing to build.
 #
-# The only thing worth saying is that the service worker and the manifest
+# Say that here rather than leaving it to each site's dashboard. Without a
+# [build] block Netlify falls back to whatever that one site was configured
+# with, so the same commit can publish on one site and fail on another; this
+# file wins over the dashboard, which makes the deploy the same everywhere.
+[build]
+  command = ""
+  publish = "."
+
+# The other thing worth saying is that the service worker and the manifest
 # must not be held in a CDN cache: they are how the app learns it has been
 # updated, so a stale one pins every installed phone to an old version.
 
