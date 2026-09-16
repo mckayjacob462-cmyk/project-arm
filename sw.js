@@ -8,7 +8,7 @@
 
    Bump VERSION on every deploy — that is what evicts the old cache.
    ========================================================================= */
-const VERSION = 'cnc-study-v2';
+const VERSION = 'cnc-study-v3';
 const SHELL = VERSION + '-shell';
 const FONTS = VERSION + '-fonts';
 

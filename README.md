@@ -51,15 +51,21 @@ Everything sizes off the viewport: the card takes whatever height the screen
 can spare, between a floor and a ceiling, so it suits a small iPhone, a large
 iPhone and an iPad without a fixed size. The rating buttons sit at the bottom
 of the screen, within one-handed reach, and every control is at least 44px.
+The side gutters grow to clear a notch when the phone is on its side, and the
+header and tab bar keep clear of the status bar and the home indicator.
 
 ## Home
 
 The first thing on the screen is the one thing you probably came to do:
 **Continue studying**, which reads what is actually due — overdue cards if
 there are any, otherwise codes you have never seen, otherwise the ones you
-starred. Under it, the decks (all, needs practice, G, M), the two games, and
-a summary of progress. One tap to carry on, and nothing else competing for
-the eye.
+starred. Nothing on the page is bigger than it.
+
+Under it, **My decks** — the whole sheet, then G and M — each tile carrying
+how many of its codes you have learned, a bar, and when you last studied it,
+so the choice is made on the tile rather than after opening it. Then **Needs
+practice**, with a count and one button; then the games; then a line of
+progress. One tap to carry on, and nothing else competing for the eye.
 
 ## Study
 
@@ -67,9 +73,14 @@ One card, one thing on it. The front is the code and nothing else — a
 prompt says *tap card to reveal answer* for the first few flips and then
 retires. Tap anywhere on the card and it turns over to what the code means,
 the plain-English reading of it, and one worked block; the code itself is not
-repeated, because you are looking at the answer to it. **Show the diagram**
-draws the animation of what that code does to the machine, in place, when you
-want it.
+repeated, because you are looking at the answer to it. Tap again and the
+question comes back. **Show the diagram** draws the animation of what that
+code does to the machine, in place, when you want it — and a tap on a running
+animation is a tap on the animation, not a flip.
+
+The card is the same size whichever face is up: the rating row keeps its
+place while the card is face down rather than appearing and pushing the card
+around.
 
 Then four buttons — **Again · Hard · Good · Easy** — each captioned with when
 that choice brings the card back. Rating advances automatically, so a session
@@ -86,19 +97,29 @@ card rather than stretching it off the screen.
 **The schedule.** Six levels, spaced 0, 1, 2, 4, 9 and 21 days apart. *Good*
 moves a card up one, *Easy* two, *Hard* holds it where it is but brings it
 back a little sooner, and *Again* drops it to the bottom, marks a lapse and
-puts it back a few cards later in the same session. A new session deals what
-is overdue first, then what is new, weakest first. Missing a code in a game
+puts it back a few cards later in the same session. Missing a code in a game
 counts against it; a lucky tap in a game never promotes one.
 
+Every card keeps its own record: when you last saw it, how many times, how
+often you were right, how often you were wrong, how many times you have sent
+it to Needs practice, where it sits and when it is next due. A session deals
+what is overdue first, then what is new, and inside each band the shakiest
+card leads — low level first, then a poor hit rate, then the ones you keep
+starring. A record written by an older version is filled in rather than
+thrown away.
+
 The strip above the card shows *12 of 40* with a bar, and a star that files
-the code under **Needs practice** — a deck you can study on its own.
+the code under **Needs practice**. Starring is a request, not a hint: a
+starred card comes round with the overdue ones instead of waiting out its
+interval, and it is a deck you can study on its own.
 
-Finish a deck and you get a session summary: cards studied, how many came
-back right, what needs another pass, and the day streak. Under it: review the
-ones you missed, review the difficult ones, study codes you have not seen
-yet, restart the deck, or go home.
+Finish a deck and you get a session summary: accuracy on a ring, cards
+studied, how many came back right, what needs another pass, and the day
+streak. Under it, in the order you are most likely to want them: review the
+ones you missed, study what needs practice, review the difficult ones, study
+codes you have not seen yet, restart the deck, or go home.
 
-Keys: `Space` reveals · `1`–`4` rate · `←` `→` move · `S` stars.
+Keys: `Space` turns the card · `1`–`4` rate · `←` `→` move · `S` stars.
 
 ## Browse
 
@@ -114,13 +135,19 @@ starred for later.
 pair settles out of the way, a wrong one marks both tiles briefly without
 telling you which was right. It is timed, and the best time is kept.
 
-**Code Rush** — sixty seconds, three lives, four choices. Questions run both
-ways: name what a code does, or name the code that does a thing. Distractors
-come from the same family and, where possible, the same functional group. A
-streak multiplies each answer up to 5×; the high score, best streak and round
-count are kept. `A`–`D` pick without reaching for the screen. Anything missed
-can be handed to the Study tab as a deck of exactly those codes. The clock
-stops with the screen — lock the phone and the round waits where you left it.
+**Multiple Choice** — twenty questions, no clock and nothing to lose, so you
+can think. Questions run both ways: name what a code does, or name the code
+that does a thing. The three wrong answers come from the same family and,
+where possible, the same functional group, so they are ones you could
+actually believe.
+
+**Timed Challenge** — the same questions against a clock you choose: thirty
+seconds, a minute, or two. Three lives, and a streak that multiplies each
+answer up to 5×. The high score, best streak and round count are kept; only a
+timed round sets a high score, since the score depends on the clock. `A`–`D`
+pick without reaching for the screen. Anything missed in either mode can be
+handed to the Study tab as a deck of exactly those codes. The clock stops
+with the screen — lock the phone and the round waits where you left it.
 
 Both games feed the same schedule the Study tab uses, so time spent here is
 not time spent away from studying.

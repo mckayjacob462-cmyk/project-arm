@@ -50,6 +50,9 @@
 
   /* Apple asks for 44pt; nothing you tap here is smaller. */
   --tap:44px;
+  /* the side gutters grow to clear a notch when the phone is on its side */
+  --edge-l:max(16px, env(safe-area-inset-left, 0px));
+  --edge-r:max(16px, env(safe-area-inset-right, 0px));
 
   /* The card takes what the viewport can spare rather than a fixed height,
      so a small iPhone, a large iPhone and an iPad each get a sensible one. */
@@ -124,7 +127,11 @@ h1,h2,h3,h4,p{margin:0; text-wrap:pretty}
   border-bottom:1px solid transparent; transition:border-color .2s;
 }
 .appbar.stuck{border-bottom-color:var(--line)}
-.appbar-in{display:flex; align-items:center; gap:12px; padding:12px 16px calc(12px + env(safe-area-inset-top,0px)); padding-top:max(12px,env(safe-area-inset-top,0px))}
+.appbar-in{
+  display:flex; align-items:center; gap:12px;
+  padding:12px var(--edge-r) 12px var(--edge-l);
+  padding-top:max(12px, env(safe-area-inset-top, 0px));
+}
 .logo{width:38px; height:38px; flex:none; color:var(--accent)}
 .brand{margin-right:auto; min-width:0}
 .brand h1{font-size:21px; font-weight:800; letter-spacing:-.02em; line-height:1.15}
@@ -139,7 +146,7 @@ h1,h2,h3,h4,p{margin:0; text-wrap:pretty}
 /* the shell is already a full-height column, so main is exactly the room
    between the header and the tab bar — a view can ask for all of it */
 main{flex:1 0 auto; display:flex; flex-direction:column;
-     padding:4px 16px calc(var(--tabh) + 26px + env(safe-area-inset-bottom,0px))}
+     padding:4px var(--edge-r) calc(var(--tabh) + 26px + env(safe-area-inset-bottom,0px)) var(--edge-l)}
 .view[hidden]{display:none}
 .view{display:flex; flex-direction:column; gap:14px}
 
@@ -152,7 +159,10 @@ main{flex:1 0 auto; display:flex; flex-direction:column;
   border-top:1px solid var(--line);
   padding-bottom:env(safe-area-inset-bottom,0px);
 }
-.tabbar-in{max-width:var(--col); margin:0 auto; display:grid; grid-template-columns:repeat(5,1fr); gap:2px; padding:7px 8px 8px}
+.tabbar-in{
+  max-width:var(--col); margin:0 auto; display:grid; grid-template-columns:repeat(5,1fr); gap:2px;
+  padding:7px calc(var(--edge-r) - 8px) 8px calc(var(--edge-l) - 8px);
+}
 .tab{
   appearance:none; border:0; background:transparent; cursor:pointer;
   display:flex; flex-direction:column; align-items:center; gap:3px;
@@ -264,6 +274,9 @@ main{flex:1 0 auto; display:flex; flex-direction:column;
 
 /* front: the code, nothing else competing with it */
 .face{flex:1; display:flex; flex-direction:column; min-height:0}
+/* a turn is quick and small — enough to read as a flip, not enough to wait on */
+.face.turned{animation:faceTurn .19s ease-out both}
+@keyframes faceTurn{ from{ opacity:0; transform:scaleX(.94) } to{ opacity:1; transform:none } }
 .face-q{
   flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
   gap:var(--sp-3); padding:var(--sp-5) var(--sp-5);
@@ -315,7 +328,9 @@ main{flex:1 0 auto; display:flex; flex-direction:column;
 /* =========================================================================
    RATING — only after the answer is showing
    ========================================================================= */
-.rate[hidden]{display:none}
+/* The row keeps its space while the card is face down, so turning the card
+   never resizes it — the card is the same size all session. */
+.rate[hidden]{visibility:hidden; pointer-events:none}
 .rate{display:grid; grid-template-columns:repeat(4,1fr); gap:var(--sp-2)}
 .rate button{
   appearance:none; cursor:pointer; min-height:var(--tap);
@@ -565,6 +580,20 @@ pre.block .c{color:var(--ink-3)}
 .cont .go svg{width:22px; height:22px}
 
 .pick{display:grid; grid-template-columns:repeat(2,1fr); gap:var(--sp-3)}
+/* The whole sheet is the deck most people want, so it takes the full width
+   and lays out sideways — which also keeps it shorter than the Continue
+   button above it, where the eye is meant to land first. */
+.pick button:first-child{
+  grid-column:1 / -1;
+  display:grid; grid-template-columns:auto 1fr; column-gap:var(--sp-3); row-gap:0;
+  align-items:center;
+}
+.pick button:first-child .ic{grid-row:1 / 3; margin-bottom:0; width:38px; height:38px; border-radius:12px}
+.pick button:first-child .ic svg{width:19px; height:19px}
+.pick button:first-child strong{grid-column:2; align-self:end}
+.pick button:first-child .count{grid-column:2; align-self:start}
+.pick button:first-child .bar,
+.pick button:first-child .when{grid-column:1 / -1}
 .pick button{
   appearance:none; cursor:pointer; text-align:left; min-height:var(--tap);
   background:var(--surface); border:1px solid var(--line); border-radius:var(--r);
@@ -577,10 +606,36 @@ pre.block .c{color:var(--ink-3)}
 .pick .ic svg{width:16px; height:16px}
 .pick strong{font-size:14.5px; font-weight:700; letter-spacing:-.01em}
 .pick span{font-size:12.5px; color:var(--ink-3); font-variant-numeric:tabular-nums}
+.pick .when{font-size:11.5px; color:var(--ink-3); font-weight:500}
+.pick .bar{background:var(--surface-3)}
 .pick .a{background:var(--accent-soft); color:var(--accent)}
 .pick .w{background:var(--warn-soft); color:var(--warn)}
 .pick .g{background:var(--good-soft); color:var(--good)}
 .pick .n{background:var(--surface-2); color:var(--ink-3)}
+
+/* a labelled row of chips, so it is obvious what each row sets */
+.setline{display:flex; flex-direction:column; gap:7px}
+.setline .lbl{font-size:11.5px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--ink-3); padding:0 2px}
+
+/* one row, one number, one thing to do about it */
+.needs{
+  appearance:none; cursor:pointer; text-align:left; width:100%;
+  background:var(--warn-soft); border:1px solid var(--warn-line); border-radius:var(--r);
+  padding:var(--sp-4); display:flex; align-items:center; gap:var(--sp-4);
+  min-height:76px; transition:transform .1s, border-color .15s;
+}
+.needs:active{transform:scale(.985)}
+.needs .ic{width:46px; height:46px; flex:none; border-radius:14px; display:grid; place-items:center;
+  background:var(--surface); color:var(--warn)}
+.needs .ic svg{width:24px; height:24px; fill:var(--warn)}
+.needs .txt{flex:1; min-width:0; display:flex; flex-direction:column; gap:2px}
+.needs strong{font-size:17px; font-weight:800; letter-spacing:-.02em; color:var(--ink)}
+.needs .txt span{font-size:12.5px; color:var(--ink-2); line-height:1.4}
+.needs .cta{
+  flex:none; font-size:13px; font-weight:700; color:var(--accent-ink);
+  background:var(--accent); border-radius:var(--r-pill); padding:10px 14px; min-height:var(--tap);
+  display:inline-flex; align-items:center;
+}
 
 /* =========================================================================
    GAMES
@@ -642,7 +697,8 @@ pre.block .c{color:var(--ink-3)}
 .toast{
   position:fixed; left:50%; bottom:calc(var(--tabh) + 20px + env(safe-area-inset-bottom,0px)); transform:translate(-50%,10px);
   background:var(--ink); color:var(--bg); font-size:13.5px; font-weight:600; padding:10px 16px; border-radius:var(--r-pill);
-  box-shadow:var(--shadow-lift); opacity:0; pointer-events:none; transition:opacity .22s, transform .22s; z-index:60; max-width:calc(100vw - 32px);
+  box-shadow:var(--shadow-lift); opacity:0; pointer-events:none; transition:opacity .22s, transform .22s; z-index:60;
+  max-width:calc(100vw - var(--edge-l) - var(--edge-r));
 }
 .toast.on{opacity:1; transform:translate(-50%,0)}
 
@@ -689,6 +745,11 @@ pre.block .c{color:var(--ink-3)}
   <div class="hsec">
     <div class="hsec-h"><h2>My decks</h2></div>
     <div class="pick" id="h-decks"></div>
+  </div>
+
+  <div class="hsec" id="h-needs-sec">
+    <div class="hsec-h"><h2>Needs practice</h2></div>
+    <div id="h-needs"></div>
   </div>
 
   <div class="hsec">
@@ -943,10 +1004,11 @@ if (!PROG.boxes || typeof PROG.boxes !== 'object') PROG.boxes = {};
 const APP = Object.assign(
   { theme:'system', deck:'all', visuals:true, tips:true, tab:'home',
     srs:{}, star:{}, flips:0, streak:{ n:0, last:'' },
-    game:{ best:0, plays:0, bestStreak:0, matchBest:0 } },
+    game:{ best:0, plays:0, bestStreak:0, matchBest:0, rushTime:60 } },
   readJSON(LS_APP, {})
 );
 ['srs','star','game','streak'].forEach(k => { if (!APP[k] || typeof APP[k] !== 'object') APP[k] = {}; });
+if (typeof APP.game.rushTime !== 'number') APP.game.rushTime = 60;
 if (typeof APP.flips !== 'number') APP.flips = 0;
 if (typeof APP.streak.n !== 'number') APP.streak = { n:0, last:'' };
 
@@ -974,23 +1036,34 @@ const DAY = 86400000;
 const STEPS = [0, 1, 2, 4, 9, 21];          /* days between sightings, by level */
 const today = () => new Date().toISOString().slice(0, 10);
 
+/* What is kept for each card: where it sits, when it is next due, how often
+   it has been seen, and how that went. Records written by an older version
+   are filled in rather than thrown away, so nobody loses their progress. */
 function rec(c){
   let r = APP.srs[c];
   if (!r || typeof r !== 'object'){
     /* a code the full trainer already knows starts from what it recorded */
     const lvl = Math.min(5, PROG.boxes[c] || 0);
-    r = APP.srs[c] = { lvl: lvl, due: 0, reps: 0, lapses: 0, last: 0, wrong: false };
+    r = APP.srs[c] = { lvl: lvl, due: 0, reps: 0, lapses: 0, last: 0, wrong: false, right: 0, miss: 0, starred: 0 };
   }
+  if (typeof r.right !== 'number')   r.right = Math.max(0, (r.reps || 0) - (r.lapses || 0));
+  if (typeof r.miss !== 'number')    r.miss = r.lapses || 0;
+  if (typeof r.starred !== 'number') r.starred = 0;
   return r;
 }
+/* how often you have been right about this card, 0 to 1 — unseen reads as 0 */
+const hitRate = c => { const r = rec(c); const n = r.right + r.miss; return n ? r.right / n : 0; };
 const levelOf = c => rec(c).lvl;
 const isLearned = c => levelOf(c) >= 4;
 const isSeen    = c => rec(c).reps > 0 || (PROG.boxes[c] || 0) > 0;
-const isDue     = c => isSeen(c) && rec(c).due <= Date.now();
 const isNew     = c => !isSeen(c);
 const isStar    = c => !!APP.star[c];
-/* shaky: known to you, but you have dropped it more than once or it sits low */
-const isShaky   = c => isSeen(c) && (rec(c).lapses >= 2 || rec(c).lvl <= 1);
+/* ready to come round now: its interval is up, or you asked for it back */
+const isDue     = c => isSeen(c) && (isStar(c) || rec(c).due <= Date.now());
+/* shaky: known to you, but sitting low, dropped more than once, or you have
+   been wrong about it more often than right */
+const isShaky   = c => isSeen(c) && (rec(c).lapses >= 2 || rec(c).lvl <= 1 ||
+                       (rec(c).right + rec(c).miss >= 3 && hitRate(c) < 0.5));
 
 /* how long until this card comes round again, for the button captions */
 function previewGap(c, rating){
@@ -1009,9 +1082,11 @@ function applyRating(c, rating){
   r.last = Date.now();
   if (rating === 'again'){
     if (r.lvl > 0) r.lapses++;
+    r.miss++;
     r.lvl = 0; r.wrong = true;
     r.due = Date.now();
   } else {
+    r.right++;
     r.wrong = false;
     r.lvl = rating === 'hard' ? Math.max(0, r.lvl)
           : rating === 'easy' ? Math.min(5, r.lvl + 2)
@@ -1028,6 +1103,7 @@ function applyRating(c, rating){
    a study rep, so a hit never promotes a card */
 function gameResult(c, right){
   const r = rec(c);
+  if (right) r.right++; else r.miss++;
   if (!right){ if (r.lvl > 0) r.lapses++; r.lvl = Math.max(0, r.lvl - 1); r.wrong = true; r.due = Date.now(); }
   PROG.boxes[c] = r.lvl;
   saveApp(); saveProg();
@@ -1040,6 +1116,13 @@ function bumpStreak(){
   APP.streak.n = APP.streak.last === y ? (APP.streak.n || 0) + 1 : 1;
   APP.streak.last = d;
   saveApp();
+}
+
+/* "3 days ago" reads better than a date on a tile this small */
+function agoText(t){
+  if (!t) return 'not studied yet';
+  const d = Math.floor((Date.now() - t) / DAY);
+  return d <= 0 ? 'studied today' : d === 1 ? 'studied yesterday' : 'studied ' + d + ' days ago';
 }
 
 function tally(list){
@@ -1137,17 +1220,30 @@ function srcName(){ return S.only ? (S.onlyName || 'Selected codes') : (SOURCES[
 
 /* Order: anything overdue first, then codes you have never seen, then the
    rest by how shaky they are. That is the whole "prioritise weak and new". */
+/* Overdue first, then new, then the rest. Within a band the shakiest card
+   leads: low level, then a poor hit rate, then how often you have sent it to
+   Needs practice, then how often you have dropped it. A little randomness
+   breaks ties so the deck is not the same list every time. */
 function orderCards(list){
   const now = Date.now();
   const rank = c => {
     const r = rec(c.c);
+    /* asking to practise a card again is a request, not a hint: it comes
+       round with the overdue ones rather than waiting for its interval */
+    if (isStar(c.c)) return 0;
     if (!isSeen(c.c)) return 1;               /* new comes early, after overdue */
     if (r.due <= now) return 0;
     return 2;
   };
+  const need = c => {
+    const r = rec(c.c);
+    /* everything that says "you keep getting this one wrong", as one number */
+    return (5 - r.lvl) + (1 - hitRate(c.c)) * 3 + Math.min(r.starred, 3) * 1.5
+         + Math.min(r.lapses, 4) * 0.75 + (isStar(c.c) ? 2 : 0);
+  };
   return list
-    .map(c => ({ c, k:rank(c), lvl:rec(c.c).lvl, lap:rec(c.c).lapses, j:Math.random() }))
-    .sort((a, b) => a.k - b.k || a.lvl - b.lvl || b.lap - a.lap || a.j - b.j)
+    .map(c => ({ c, k:rank(c), w:need(c), j:Math.random() }))
+    .sort((a, b) => a.k - b.k || b.w - a.w || a.j - b.j)
     .map(x => x.c);
 }
 
@@ -1212,15 +1308,16 @@ function faceHTML(c){
     '<span class="cue prev">' + ico('left') + '</span><span class="cue next">' + ico('right') + '</span>';
 }
 
-function renderCard(dir){
+function renderCard(dir, turned){
   stopDemo();
   const deck = $('#deck');
   if (!S.queue.length || S.i >= S.queue.length){ renderDone(); return; }
   const c = current();
   deck.innerHTML = '<div class="flash" id="flash" tabindex="0" role="button" ' +
-    'aria-label="' + esc(c.c) + (S.open ? ' — answer showing' : ' — tap to reveal the answer') + '">' +
+    'aria-label="' + esc(c.c) + (S.open ? ' — answer showing, tap to hide it' : ' — tap to reveal the answer') + '">' +
     faceHTML(c) + '</div>';
   const el = $('#flash');
+  if (turned && !REDUCED) el.querySelector('.face').classList.add('turned');
   if (dir){
     el.style.setProperty('--from', dir > 0 ? '26%' : '-26%');
     el.classList.add('in');
@@ -1228,7 +1325,9 @@ function renderCard(dir){
   }
   wireCard(el);
   $('#s-rate').hidden = !S.open;
-  if (S.open) paintRateLabels(c);
+  /* the captions are painted either way, so the row is the same height
+     whichever face is up and the card never changes size under you */
+  paintRateLabels(c);
   paintStrip();
 }
 
@@ -1239,12 +1338,14 @@ function paintRateLabels(c){
   $('#rl-easy').textContent  = previewGap(c.c, 'easy');
 }
 
+/* The card turns both ways: a tap shows the answer, another tap puts the
+   question back. Only the first direction counts towards retiring the hint. */
 function flip(){
-  if (S.open || !S.queue.length) return;
-  S.open = true;
-  APP.flips++; saveApp();
+  if (!S.queue.length) return;
+  S.open = !S.open;
+  if (S.open){ APP.flips++; saveApp(); }
   tick(8);
-  renderCard();
+  renderCard(0, true);
 }
 
 /* ---- rating: the only thing that schedules a card ---- */
@@ -1293,7 +1394,7 @@ const LOCK = 12;      /* travel before we call it a drag at all */
 const GO   = 74;      /* travel before releasing counts as a swipe */
 
 function wireCard(card){
-  let id = null, x0 = 0, y0 = 0, dx = 0, lock = null, t0 = 0, hit = null;
+  let id = null, x0 = 0, y0 = 0, dx = 0, lock = null, t0 = 0, hit = null, watching = false;
 
   const cue = (v) => {
     const k = Math.min(1, Math.abs(v) / GO);
@@ -1315,6 +1416,8 @@ function wireCard(card){
     /* the card captures the pointer, so a button inside it would never see a
        click of its own — remember what the press landed on instead */
     hit = e.target && e.target.closest ? e.target.closest('[data-diag]') : null;
+    /* the mounted animation is something to watch, not a place to tap-flip */
+    watching = !!(e.target && e.target.closest && e.target.closest('#s-vp'));
     card.classList.add('press');
     card.classList.remove('settle');
     try { card.setPointerCapture(id); } catch (err){}
@@ -1354,6 +1457,7 @@ function wireCard(card){
     if (lock !== null || Date.now() - t0 >= 600){ hit = null; return; }
     if (hit && card.contains(hit)){ const d = hit; hit = null; showDiagram(d); return; }
     hit = null;
+    if (watching) return;
     flip();
   }
   card.addEventListener('pointerup', end);
@@ -1361,7 +1465,7 @@ function wireCard(card){
   card.addEventListener('keydown', e => {
     if (e.key !== 'Enter' && e.key !== ' ') return;
     e.preventDefault(); e.stopPropagation();
-    if (!S.open) flip();
+    flip();
   });
   /* mouse and keyboard activation still arrive as a plain click */
   card.addEventListener('click', e => {
@@ -1385,6 +1489,8 @@ function showDiagram(btn){
 function renderDone(){
   const ses = S.session || { studied:0, right:0, again:0, missed:[], total:0 };
   const pct = ses.studied ? Math.round(ses.right / ses.studied * 100) : 0;
+  const n = deckCounts();
+  const nStar = n.star, nShaky = n.shaky, nFresh = n.fresh;
   const C = 2 * Math.PI * 34;
   $('#s-live').hidden = true;
   const box = $('#s-done');
@@ -1395,7 +1501,8 @@ function renderDone(){
         '<circle cx="40" cy="40" r="34" fill="none" stroke-width="8" stroke="var(--surface-3)"/>' +
         '<circle cx="40" cy="40" r="34" fill="none" stroke-width="8" stroke="var(--good)" stroke-linecap="round" ' +
           'transform="rotate(-90 40 40)" stroke-dasharray="' + C.toFixed(1) + '" stroke-dashoffset="' + (C * (1 - pct / 100)).toFixed(1) + '"/>' +
-        '<text x="40" y="45" text-anchor="middle" style="font:700 19px var(--sans); fill:var(--ink)">' + pct + '%</text>' +
+        '<text x="40" y="41" text-anchor="middle" style="font:700 19px var(--sans); fill:var(--ink)">' + pct + '%</text>' +
+        '<text x="40" y="53" text-anchor="middle" style="font:700 7.5px var(--sans); letter-spacing:.09em; fill:var(--ink-3)">ACCURACY</text>' +
       '</svg>' +
       '<h2>Session done</h2>' +
       '<p>' + (ses.missed.length
@@ -1410,9 +1517,12 @@ function renderDone(){
     '</div></div>' +
     '<div class="hsec"><div class="hsec-h"><h2>Study again</h2></div>' +
       '<div class="again-opts">' +
+        /* the two you are most likely to want are the two at the top */
         (ses.missed.length ? '<button class="btn wide" type="button" data-again="missed">' + ico('replayico') + 'Review the ' + ses.missed.length + ' missed</button>' : '') +
-        (CARDS.filter(c => isShaky(c.c)).length ? '<button class="btn sec wide" type="button" data-again="shaky">Review difficult</button>' : '') +
-        (CARDS.filter(c => isNew(c.c)).length ? '<button class="btn sec wide" type="button" data-again="fresh">Study new codes</button>' : '') +
+        (nStar ? '<button class="btn' + (ses.missed.length ? ' sec' : '') + ' wide" type="button" data-again="star">' +
+          ico('star') + 'Needs practice (' + nStar + ')</button>' : '') +
+        (nShaky ? '<button class="btn sec wide" type="button" data-again="shaky">Review difficult</button>' : '') +
+        (nFresh ? '<button class="btn sec wide" type="button" data-again="fresh">Study new codes</button>' : '') +
         '<button class="btn sec wide" type="button" data-again="restart">Restart this deck</button>' +
         '<button class="btn sec wide" type="button" data-again="home">Back to home</button>' +
       '</div>' +
@@ -1583,7 +1693,7 @@ function paintBrowse(){
 
 function toggleStar(code){
   const on = !isStar(code);
-  if (on) APP.star[code] = 1; else delete APP.star[code];
+  if (on){ APP.star[code] = 1; rec(code).starred++; } else delete APP.star[code];
   saveApp(); tick(on ? 12 : 6);
   toast(on ? code + ' added to Needs practice' : code + ' removed from Needs practice');
   return on;
@@ -1604,24 +1714,29 @@ function openInBrowse(code){
    ----------------------------------------------------------------------- */
 
 const G = { view:'hub', deck:'all',
-            /* rush */
-            on:false, over:false, paused:false, score:0, streak:0, bestRun:0, lives:3,
+            /* the quiz, timed or not */
+            on:false, over:false, paused:false, timed:true, limit:60, asked:0, ask:0,
+            score:0, streak:0, bestRun:0, lives:3,
             left:60, t0:0, tick:0, next:0, q:null, locked:false, right:0, wrong:0, missed:[], pool:[],
             /* match */
             m:null };
-const RUSH_SECONDS = 60;
+const RUSH_TIMES = [30, 60, 120];      /* the timed challenge's three lengths */
+const QUIZ_LEN = 20;                   /* questions in an untimed round */
 
 function gameDeck(){ return CARDS.filter(c => G.deck === 'all' || c.f === G.deck); }
 
 function paintGame(){
   const body = $('#g-body');
-  if (G.view === 'rush'){ paintRush(body); return; }
+  if (G.view === 'rush'){ paintQuiz(body); return; }
   if (G.view === 'match'){ paintMatch(body); return; }
   paintHub(body);
 }
 
+/* Three ways to play, and the clock is only one of them. */
 function paintHub(body){
   const g = APP.game;
+  const chosen = RUSH_TIMES.indexOf(g.rushTime) >= 0 ? g.rushTime : 60;
+  const secs = n => n < 60 ? n + 's' : n === 60 ? '1 min' : (n / 60) + ' min';
   body.innerHTML =
     '<div class="hsec">' +
       '<div class="hsec-h"><h2>Games</h2></div>' +
@@ -1630,23 +1745,39 @@ function paintHub(body){
         '<span class="txt"><strong>Match Up</strong><span>Pair each code with what it does</span></span>' +
         (g.matchBest ? '<span class="best">' + g.matchBest + 's</span>' : '') +
       '</button>' +
+      '<button class="gtile" type="button" data-game="quiz">' +
+        '<span class="ic" style="background:var(--accent-soft); color:var(--accent)">' + ico('target') + '</span>' +
+        '<span class="txt"><strong>Multiple Choice</strong><span>' + QUIZ_LEN + ' questions, no clock</span></span>' +
+      '</button>' +
       '<button class="gtile" type="button" data-game="rush">' +
-        '<span class="ic" style="background:var(--accent-soft); color:var(--accent)">' + ico('bolt') + '</span>' +
-        '<span class="txt"><strong>Code Rush</strong><span>Sixty seconds, three lives, four choices</span></span>' +
+        '<span class="ic" style="background:var(--warn-soft); color:var(--warn)">' + ico('bolt') + '</span>' +
+        '<span class="txt"><strong>Timed Challenge</strong><span>As many as you can before the clock runs out</span></span>' +
         (g.best ? '<span class="best">' + g.best + '</span>' : '') +
       '</button>' +
     '</div>' +
-    '<div class="chips" role="group" aria-label="Which codes">' +
-      ['all','G','M'].map(d => '<button class="chip" type="button" data-gdeck="' + d + '" aria-pressed="' +
-        (G.deck === d) + '">' + (d === 'all' ? 'All codes' : d + '-Code') + '</button>').join('') +
-    '</div>' +
+    '<div class="setline"><span class="lbl" id="g-len-l">How long the challenge runs</span>' +
+      '<div class="chips" role="group" aria-labelledby="g-len-l">' +
+        RUSH_TIMES.map(n => '<button class="chip" type="button" data-gtime="' + n + '" aria-pressed="' +
+          (chosen === n) + '">' + secs(n) + '</button>').join('') +
+      '</div></div>' +
+    '<div class="setline"><span class="lbl" id="g-deck-l">Which codes to play with</span>' +
+      '<div class="chips" role="group" aria-labelledby="g-deck-l">' +
+        ['all','G','M'].map(d => '<button class="chip" type="button" data-gdeck="' + d + '" aria-pressed="' +
+          (G.deck === d) + '">' + (d === 'all' ? 'All codes' : d + '-Code') + '</button>').join('') +
+      '</div></div>' +
     '<p style="font-size:12.5px; color:var(--ink-3); line-height:1.5; padding:0 2px">' +
       'Anything you miss in a game is scheduled to come round again in Study.</p>';
+  body.querySelectorAll('[data-gtime]').forEach(b => b.addEventListener('click', () => {
+    APP.game.rushTime = +b.dataset.gtime; saveApp(); paintGame();
+  }));
   body.querySelectorAll('[data-gdeck]').forEach(b => b.addEventListener('click', () => {
     G.deck = b.dataset.gdeck; G.pool = []; paintGame();
   }));
   body.querySelectorAll('[data-game]').forEach(b => b.addEventListener('click', () => {
-    if (b.dataset.game === 'match') startMatch(); else startRush();
+    const k = b.dataset.game;
+    if (k === 'match') startMatch();
+    else if (k === 'quiz') startQuiz(false);
+    else startQuiz(true, chosen);
   }));
 }
 
@@ -1806,15 +1937,22 @@ function newQuestion(){
   G.locked = false;
 }
 
-function startRush(){
+/* One quiz, two ways to play it. Untimed is a plain round of questions with
+   nothing to lose; timed adds the clock and three lives. */
+function startQuiz(timed, seconds){
   stopClocks();
   G.view = 'rush';
+  G.timed = !!timed;
+  G.limit = seconds || APP.game.rushTime || 60;
   G.on = true; G.over = false; G.score = 0; G.streak = 0; G.bestRun = 0; G.lives = 3;
-  G.left = RUSH_SECONDS; G.right = 0; G.wrong = 0; G.missed = []; G.pool = [];
+  G.left = G.limit; G.right = 0; G.wrong = 0; G.missed = []; G.pool = [];
+  G.asked = 0;
+  G.ask = G.timed ? 0 : Math.min(QUIZ_LEN, gameDeck().length);
   newQuestion();
   paintGame();
-  startTick();
+  if (G.timed) startTick();
 }
+const replayQuiz = () => startQuiz(G.timed, G.limit);
 
 function stopClocks(){
   clearInterval(G.tick); G.tick = 0;
@@ -1822,39 +1960,47 @@ function stopClocks(){
   G.paused = false;
 }
 function startTick(){
+  if (!G.timed) return;
   clearInterval(G.tick);
   G.paused = false;
-  G.t0 = Date.now() - (RUSH_SECONDS - G.left) * 1000;
+  G.t0 = Date.now() - (G.limit - G.left) * 1000;
   G.tick = setInterval(() => {
-    G.left = Math.max(0, RUSH_SECONDS - (Date.now() - G.t0) / 1000);
+    G.left = Math.max(0, G.limit - (Date.now() - G.t0) / 1000);
     const bar = $('#g-timer');
     if (bar){
-      bar.style.width = (G.left / RUSH_SECONDS * 100) + '%';
+      bar.style.width = (G.left / G.limit * 100) + '%';
       bar.classList.toggle('low', G.left <= 10);
     }
-    if (G.left <= 0) endRush();
+    if (G.left <= 0) endQuiz();
   }, 120);
 }
 function pauseGame(){ if (G.on && G.tick){ clearInterval(G.tick); G.tick = 0; G.paused = true; } }
 function resumeGame(){ if (G.on && G.paused) startTick(); }
 
-function paintRush(body){
-  if (G.over){ paintRushDone(body); return; }
+function paintQuiz(body){
+  if (G.over){ paintQuizDone(body); return; }
   const q = G.q;
   if (!q){ backToHub(); return; }
-  const pct = Math.max(0, G.left / RUSH_SECONDS * 100);
+  const pct = Math.max(0, G.left / G.limit * 100);
   const lives = Array.from({ length:3 }, (_, i) => '<i class="' + (i < G.lives ? '' : 'spent') + '"></i>').join('');
   const ask = q.dir === 'toDesc' ? 'What does this command?' : 'Which code does this?';
   const prompt = q.dir === 'toDesc'
     ? '<div class="q">' + esc(q.card.c) + '</div>'
     : '<div class="q words">' + esc(q.card.desc) + '</div>';
-  body.innerHTML =
-    '<div class="hud">' +
-      '<div class="cell"><span>Score</span><b id="g-score">' + G.score + '</b></div>' +
+  /* a timed round watches the clock and its lives; an untimed one just
+     counts the questions, so there is nothing to lose by thinking */
+  const hud = G.timed
+    ? '<div class="cell"><span>Score</span><b id="g-score">' + G.score + '</b></div>' +
       '<div class="cell' + (G.streak > 1 ? ' hot' : '') + '"><span>Streak</span><b>' + G.streak + (G.streak > 1 ? '×' : '') + '</b></div>' +
-      '<div class="cell"><span>Lives</span><div class="lives" style="margin-top:4px">' + lives + '</div></div>' +
-    '</div>' +
-    '<div class="timer" style="margin-top:var(--sp-3)"><i id="g-timer" class="' + (G.left <= 10 ? 'low' : '') + '" style="width:' + pct + '%"></i></div>' +
+      '<div class="cell"><span>Lives</span><div class="lives" style="margin-top:4px">' + lives + '</div></div>'
+    : '<div class="cell"><span>Question</span><b id="g-qn">' + (G.asked + 1) + ' / ' + G.ask + '</b></div>' +
+      '<div class="cell"><span>Right</span><b id="g-score">' + G.right + '</b></div>' +
+      '<div class="cell' + (G.streak > 1 ? ' hot' : '') + '"><span>Streak</span><b>' + G.streak + (G.streak > 1 ? '×' : '') + '</b></div>';
+  body.innerHTML =
+    '<div class="hud">' + hud + '</div>' +
+    (G.timed
+      ? '<div class="timer" style="margin-top:var(--sp-3)"><i id="g-timer" class="' + (G.left <= 10 ? 'low' : '') + '" style="width:' + pct + '%"></i></div>'
+      : '<div class="timer" style="margin-top:var(--sp-3)"><i style="width:' + (G.asked / Math.max(1, G.ask) * 100) + '%"></i></div>') +
     '<div class="qcard" style="margin-top:var(--sp-3)"><p class="ask">' + ask + '</p>' + prompt + '</div>' +
     '<div class="opts" style="margin-top:var(--sp-3)">' + q.opts.map((x, i) =>
       '<button class="opt' + (q.dir === 'toCode' ? ' mono-opt' : '') + '" type="button" data-pick="' + esc(x.c) + '">' +
@@ -1862,7 +2008,7 @@ function paintRush(body){
     '</div>' +
     '<button class="btn sec wide" type="button" id="g-quit" style="margin-top:var(--sp-4)">End the round</button>';
   body.querySelectorAll('[data-pick]').forEach(b => b.addEventListener('click', () => answer(b.dataset.pick)));
-  $('#g-quit').addEventListener('click', () => endRush());
+  $('#g-quit').addEventListener('click', () => endQuiz());
 }
 
 function answer(code){
@@ -1876,50 +2022,59 @@ function answer(code){
     else b.classList.add('dim');
   });
   gameResult(q.card.c, right);
+  G.asked++;
   if (right){
     G.right++; G.streak++;
     G.bestRun = Math.max(G.bestRun, G.streak);
     G.score += 10 + Math.min(G.streak - 1, 5) * 4;
     tick(10);
   } else {
-    G.wrong++; G.streak = 0; G.lives--;
+    G.wrong++; G.streak = 0;
+    if (G.timed) G.lives--;            /* nothing to lose in an untimed round */
     if (G.missed.indexOf(q.card.c) < 0) G.missed.push(q.card.c);
     tick([8, 40, 8]);
   }
   const scoreEl = $('#g-score');
-  if (scoreEl) scoreEl.textContent = G.score;
+  if (scoreEl) scoreEl.textContent = G.timed ? G.score : G.right;
   clearTimeout(G.next);
   G.next = setTimeout(() => {
     G.next = 0;
     if (!G.on) return;
-    if (G.lives <= 0 || G.left <= 0){ endRush(); return; }
+    if (G.timed ? (G.lives <= 0 || G.left <= 0) : G.asked >= G.ask){ endQuiz(); return; }
     newQuestion(); paintGame();
   }, right ? 420 : 950);
 }
 
-function endRush(){
+function endQuiz(){
   if (!G.on) return;
   stopClocks();
   G.on = false; G.over = true;
   const g = APP.game;
   g.plays = (g.plays || 0) + 1;
-  g.best = Math.max(g.best || 0, G.score);
+  /* the score depends on the clock, so only a timed round sets the record */
+  if (G.timed){
+    g.best = Math.max(g.best || 0, G.score);
+    g.rushTime = G.limit;
+  }
   g.bestStreak = Math.max(g.bestStreak || 0, G.bestRun || 0);
   bumpStreak(); saveApp();
   paintGame();
 }
 
-function paintRushDone(body){
+function paintQuizDone(body){
   const g = APP.game;
   const total = G.right + G.wrong;
   const acc = total ? Math.round(G.right / total * 100) : 0;
-  const isBest = G.score >= (g.best || 0) && G.score > 0;
+  const isBest = G.timed && G.score >= (g.best || 0) && G.score > 0;
   body.innerHTML =
     '<div class="card"><div class="sum">' +
       '<div class="orb" style="width:66px;height:66px;border-radius:20px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent)">' + ico(isBest ? 'bolt' : 'target') + '</div>' +
-      '<h2>' + G.score + ' points</h2>' +
-      '<p>' + (isBest ? 'A new high score. ' : 'High score ' + (g.best || 0) + '. ') +
-        G.right + ' right, ' + G.wrong + ' wrong — ' + acc + '% accurate.</p>' +
+      '<h2>' + (G.timed ? G.score + ' points' : acc + '% right') + '</h2>' +
+      '<p>' + (G.timed
+        ? (isBest ? 'A new high score. ' : 'High score ' + (g.best || 0) + '. ') +
+          G.right + ' right, ' + G.wrong + ' wrong — ' + acc + '% accurate.'
+        : G.right + ' of ' + total + ' right' +
+          (G.missed.length ? '. The ones you missed are scheduled to come round again.' : '. Nothing missed.')) + '</p>' +
       (APP.streak.n ? '<span class="streak">' + ico('flame') + APP.streak.n + ' day streak</span>' : '') +
       '<div class="sumstats">' +
         '<div><b>' + G.bestRun + '</b><span>Best run</span></div>' +
@@ -1934,7 +2089,7 @@ function paintRushDone(body){
     '</div>';
   const p = $('#g-practice');
   if (p) p.addEventListener('click', () => study(null, G.missed.slice(), 'Missed in Code Rush'));
-  $('#g-again').addEventListener('click', startRush);
+  $('#g-again').addEventListener('click', replayQuiz);
   $('#g-back').addEventListener('click', backToHub);
 }
 
@@ -1962,19 +2117,42 @@ function paintHome(){
   $('#h-go').innerHTML = ico('right');
   $('#h-continue').onclick = () => study(next.src, null, '');
 
+  /* Each deck says how far through it you are and when you last touched it,
+     so the choice is made on the tile rather than after opening it. */
+  /* three real decks: the whole sheet, then each half of it */
   const decks = [
-    ['all',   'All codes',      CARDS.length + ' codes',                   'a', 'grid2'],
-    ['star',  'Needs practice', n.star ? n.star + ' starred' : 'Star a card to fill this', 'w', 'star'],
-    ['G',     'G codes',        CARDS.filter(c => c.f === 'G').length + ' codes', 'a', 'study'],
-    ['M',     'M codes',        CARDS.filter(c => c.f === 'M').length + ' codes', 'a', 'study']
+    ['all', 'All codes', CARDS,                          'a', 'grid2'],
+    ['G',   'G codes',   CARDS.filter(c => c.f === 'G'), 'a', 'study'],
+    ['M',   'M codes',   CARDS.filter(c => c.f === 'M'), 'a', 'study']
   ];
-  $('#h-decks').innerHTML = decks.map(([src, name, sub, tone, icon]) =>
-    '<button type="button" data-src="' + src + '">' +
+  $('#h-decks').innerHTML = decks.map(([src, name, list, tone, icon]) => {
+    const t = tally(list);
+    const pct = t.total ? Math.round(t.mastered / t.total * 100) : 0;
+    const seen = list.filter(c => rec(c.c).last).map(c => rec(c.c).last);
+    const when = seen.length ? agoText(Math.max.apply(null, seen)) : 'not studied yet';
+    return '<button type="button" data-src="' + src + '">' +
       '<span class="ic ' + tone + '">' + ico(icon) + '</span>' +
-      '<strong>' + esc(name) + '</strong><span>' + esc(sub) + '</span>' +
-    '</button>').join('');
+      '<strong>' + esc(name) + '</strong>' +
+      '<span class="count">' + t.mastered + ' of ' + t.total + ' learned</span>' +
+      '<span class="bar" style="height:5px; margin:6px 0 4px"><i style="width:' + pct + '%"></i></span>' +
+      '<span class="when">' + esc(when) + '</span>' +
+    '</button>';
+  }).join('');
   $('#h-decks').querySelectorAll('[data-src]').forEach(b =>
     b.addEventListener('click', () => study(b.dataset.src, null, '')));
+
+  /* Needs practice earns its own row: a count and one button to study it */
+  $('#h-needs').innerHTML = n.star
+    ? '<button class="needs" type="button" id="h-needs-go">' +
+        '<span class="ic">' + ico('star') + '</span>' +
+        '<span class="txt"><strong>' + n.star + ' card' + (n.star === 1 ? '' : 's') + '</strong>' +
+        '<span>Marked to come round again</span></span>' +
+        '<span class="cta">Study now</span>' +
+      '</button>'
+    : '<div class="card"><p class="empty">Nothing here yet. Tap the star above a card, ' +
+      'or &ldquo;Practice again&rdquo; in Browse, and it will wait for you here.</p></div>';
+  const goNeeds = $('#h-needs-go');
+  if (goNeeds) goNeeds.addEventListener('click', () => study('star', null, ''));
 
   const g = APP.game;
   $('#h-games').innerHTML =
@@ -1983,14 +2161,21 @@ function paintHome(){
       '<span class="txt"><strong>Match Up</strong><span>Pair codes with what they do</span></span>' +
       (g.matchBest ? '<span class="best">' + g.matchBest + 's</span>' : '') +
     '</button>' +
+    '<button class="gtile" type="button" data-game="quiz">' +
+      '<span class="ic" style="background:var(--accent-soft); color:var(--accent)">' + ico('target') + '</span>' +
+      '<span class="txt"><strong>Multiple Choice</strong><span>' + QUIZ_LEN + ' questions, no clock</span></span>' +
+    '</button>' +
     '<button class="gtile" type="button" data-game="rush">' +
-      '<span class="ic" style="background:var(--accent-soft); color:var(--accent)">' + ico('bolt') + '</span>' +
-      '<span class="txt"><strong>Code Rush</strong><span>Sixty seconds against the clock</span></span>' +
+      '<span class="ic" style="background:var(--warn-soft); color:var(--warn)">' + ico('bolt') + '</span>' +
+      '<span class="txt"><strong>Timed Challenge</strong><span>Against the clock</span></span>' +
       (g.best ? '<span class="best">' + g.best + '</span>' : '') +
     '</button>';
   $('#h-games').querySelectorAll('[data-game]').forEach(b => b.addEventListener('click', () => {
     go('games');
-    if (b.dataset.game === 'match') startMatch(); else startRush();
+    const k = b.dataset.game;
+    if (k === 'match') startMatch();
+    else if (k === 'quiz') startQuiz(false);
+    else startQuiz(true, APP.game.rushTime || 60);
   }));
 
   const t = tally(CARDS);
@@ -2171,8 +2356,7 @@ document.addEventListener('keydown', e => {
   if (S.tab !== 'study' || S.busy) return;
 
   if (e.key === ' '){
-    if (S.open) return;                       /* leave the spacebar to scroll */
-    e.preventDefault(); flip();
+    e.preventDefault(); flip();               /* turns the card either way */
   } else if (e.key === 'ArrowRight'){
     e.preventDefault(); advance(1);
   } else if (e.key === 'ArrowLeft'){
