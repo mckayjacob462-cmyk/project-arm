@@ -44,6 +44,28 @@
   --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   --tabh:64px;
   --col:520px;
+
+  /* One spacing scale for the whole app, so nothing is spaced by eye. */
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:22px; --sp-6:30px;
+
+  /* Apple asks for 44pt; nothing you tap here is smaller. */
+  --tap:44px;
+
+  /* The card takes what the viewport can spare rather than a fixed height,
+     so a small iPhone, a large iPhone and an iPad each get a sensible one. */
+  --card-h:clamp(240px, 46dvh, 460px);
+}
+
+/* a phone small enough that the card has to give up some room */
+@media (max-height:700px){ :root{ --card-h:clamp(210px, 40dvh, 300px) } }
+/* the smallest iPhones: the strapline is not worth two lines of header */
+@media (max-width:359px){ .brand p{display:none} }
+
+/* tablets: a wider column and a bigger card, since there is room for both */
+@media (min-width:768px){
+  :root{ --col:600px; --card-h:clamp(320px, 42dvh, 520px) }
+  /* a tablet has height to spare: cap the card so it stays a card, not a slab */
+  .deck{max-height:560px}
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
@@ -73,6 +95,9 @@
 }
 
 *{box-sizing:border-box}
+/* a card sliding out of frame must not widen the page: without this the
+   browser grows the layout viewport to fit it and the whole app zooms out */
+html,body{overflow-x:hidden}
 body{
   margin:0; background:var(--bg); color:var(--ink);
   font-family:var(--sans); font-size:15px; line-height:1.5;
@@ -105,13 +130,16 @@ h1,h2,h3,h4,p{margin:0; text-wrap:pretty}
 .brand h1{font-size:21px; font-weight:800; letter-spacing:-.02em; line-height:1.15}
 .brand p{font-size:12.5px; color:var(--ink-3); font-weight:500; letter-spacing:-.005em}
 .iconbtn{
-  width:40px; height:40px; flex:none; display:grid; place-items:center; cursor:pointer;
+  width:var(--tap); height:var(--tap); flex:none; display:grid; place-items:center; cursor:pointer;
   background:var(--surface); border:1px solid var(--line); border-radius:var(--r-pill);
   color:var(--ink-2); box-shadow:var(--shadow); transition:transform .12s, color .12s, border-color .12s;
 }
 .iconbtn:hover{color:var(--accent); border-color:var(--accent-line)}
 .iconbtn:active{transform:scale(.94)}
-main{flex:1 0 auto; padding:4px 16px calc(var(--tabh) + 26px + env(safe-area-inset-bottom,0px))}
+/* the shell is already a full-height column, so main is exactly the room
+   between the header and the tab bar — a view can ask for all of it */
+main{flex:1 0 auto; display:flex; flex-direction:column;
+     padding:4px 16px calc(var(--tabh) + 26px + env(safe-area-inset-bottom,0px))}
 .view[hidden]{display:none}
 .view{display:flex; flex-direction:column; gap:14px}
 
@@ -141,7 +169,7 @@ main{flex:1 0 auto; padding:4px 16px calc(var(--tabh) + 26px + env(safe-area-ins
 .card-pad{padding:14px 16px}
 .card-head{display:flex; align-items:center; gap:10px; padding:13px 16px; border-bottom:1px solid var(--line)}
 .card-head h2{font-size:15.5px; font-weight:700; letter-spacing:-.01em; margin-right:auto}
-.card-head .n{font-family:var(--mono); font-size:17px; font-weight:600; letter-spacing:-.02em}
+.card-head .n{font-size:12.5px; font-weight:600; color:var(--ink-3); font-variant-numeric:tabular-nums}
 
 /* ---------- progress strip ---------- */
 .bar{height:9px; border-radius:var(--r-pill); background:var(--surface-3); overflow:hidden}
@@ -185,62 +213,127 @@ main{flex:1 0 auto; padding:4px 16px calc(var(--tabh) + 26px + env(safe-area-ins
 }
 .focusbar .linkbtn:hover{opacity:.75}
 
-/* ---------- flash card ---------- */
-.deck{position:relative; perspective:1200px; touch-action:pan-y}
-.fcard{
-  position:relative; width:100%; display:flex; flex-direction:column;
-  background:var(--surface); border:1px solid var(--line); border-radius:20px;
-  box-shadow:var(--shadow); cursor:pointer; user-select:none;
-  min-height:268px; overflow:hidden; will-change:transform;
-}
-.fcard.dragging{transition:none; box-shadow:var(--shadow-lift)}
-.fcard.settle{transition:transform .28s cubic-bezier(.2,.9,.3,1)}
-.fcard.gone{transition:transform .3s ease-out, opacity .3s ease-out; opacity:0}
-.fcard-top{display:flex; gap:6px; flex-wrap:wrap; align-items:center; padding:13px 15px 0}
-.tag{
-  font-size:10.5px; font-weight:700; letter-spacing:.07em; text-transform:uppercase;
-  padding:4px 9px; border-radius:var(--r-pill); background:var(--surface-2); color:var(--ink-3); border:1px solid var(--line);
-}
-.tag.g{background:var(--accent-soft); color:var(--accent); border-color:var(--accent-line)}
-.tag.m{background:var(--warn-soft); color:var(--warn); border-color:var(--warn-line)}
-.boxdots{margin-left:auto; display:flex; gap:3px; align-items:center}
-.boxdots i{width:6px; height:6px; border-radius:50%; background:var(--line-2)}
-.boxdots i.on{background:var(--accent)}
-.fcard-mid{flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding:18px 20px 26px; gap:10px}
-.bigcode{font-size:clamp(52px,15vw,66px); font-weight:800; letter-spacing:-.035em; line-height:1;
-  font-family:var(--mono); white-space:nowrap; max-width:100%}
-.bigcode.long{font-size:clamp(26px,8vw,40px); letter-spacing:-.03em}
-.bigcode.sm{font-size:38px}
-.bigcode.sm.long{font-size:clamp(20px,6vw,27px)}
-.tapline{font-size:15px; color:var(--ink-3); font-weight:500}
-.answer{font-size:17px; font-weight:600; letter-spacing:-.01em; line-height:1.35; max-width:34ch}
-.answer + .answer-sub{font-size:13.5px; color:var(--ink-2); font-weight:450; line-height:1.5; max-width:40ch}
-.fcard .verdict{
-  position:absolute; top:16px; font-size:13px; font-weight:800; letter-spacing:.1em; text-transform:uppercase;
-  padding:6px 12px; border-radius:8px; border:2px solid; opacity:0; pointer-events:none;
-}
-.fcard .verdict.yes{right:14px; color:var(--good); border-color:var(--good); transform:rotate(9deg)}
-.fcard .verdict.no{left:14px; color:var(--bad); border-color:var(--bad); transform:rotate(-9deg)}
+/* =========================================================================
+   THE STUDY CARD
+   One thing at a time: the code on the front, the answer on the back.
+   Everything that is not the answer lives somewhere else.
+   ========================================================================= */
+/* The study screen takes all the room main has, so the card gets the space
+   and the rating row lands at the bottom, under the thumb, rather than
+   floating in the middle of the screen. The card's own min-height is the
+   floor: on a screen too short for it the page scrolls instead of crushing. */
+#v-study{flex:1; min-height:0}
+.studywrap{display:flex; flex-direction:column; gap:var(--sp-4); flex:1; min-height:0}
+.studywrap[hidden]{display:none}
+.deck{flex:1}
+.rate{margin-top:auto}
 
-/* ---------- swipe controls ---------- */
-.swipe[hidden]{display:none}
-.swipe{display:grid; grid-template-columns:1fr 1px 1fr; align-items:stretch; gap:0; padding:4px 0 2px}
-.swipe .rule{background:var(--line)}
-.swipeact{
-  appearance:none; border:0; background:transparent; cursor:pointer;
-  display:flex; flex-direction:column; align-items:center; gap:7px; padding:12px 6px; border-radius:14px;
-  transition:background .14s;
+/* the compact counter and bar above the card */
+.strip{display:flex; align-items:center; gap:var(--sp-3)}
+.strip .txt{font-size:13px; font-weight:600; color:var(--ink-2); white-space:nowrap; font-variant-numeric:tabular-nums}
+.strip .bar{flex:1; height:6px}
+.strip .starbtn{
+  appearance:none; border:0; background:transparent; cursor:pointer; flex:none;
+  width:var(--tap); height:var(--tap); margin:calc(var(--tap) / -2 + 15px) -8px; /* keeps the 44px target, not the look */
+  display:grid; place-items:center; color:var(--ink-3); border-radius:var(--r-pill);
+  transition:color .15s, transform .12s;
 }
-.swipeact:hover{background:var(--surface-2)}
-.swipeact:active{transform:scale(.97)}
-.swipeact .ring{width:62px; height:62px; border-radius:50%; display:grid; place-items:center}
-.swipeact .ring svg{width:26px; height:26px}
-.swipeact strong{font-size:15px; font-weight:700; letter-spacing:-.01em}
-.swipeact em{font-style:normal; font-size:12px; color:var(--ink-3); line-height:1.35}
-.swipeact.no .ring{background:var(--bad-soft); color:var(--bad)}
-.swipeact.no strong{color:var(--bad)}
-.swipeact.yes .ring{background:var(--good-soft); color:var(--good)}
-.swipeact.yes strong{color:var(--good)}
+.strip .starbtn svg{width:21px; height:21px}
+.strip .starbtn:active{transform:scale(.88)}
+.strip .starbtn[aria-pressed="true"]{color:var(--warn)}
+.strip .starbtn[aria-pressed="true"] svg{fill:var(--warn)}
+
+/* the card itself sizes from the viewport, so it suits a small iPhone,
+   a large iPhone and an iPad without a fixed height */
+.deck{position:relative; touch-action:pan-y; min-height:var(--card-h)}
+.flash{
+  position:absolute; inset:0;
+  display:flex; flex-direction:column;
+  background:var(--surface); border:1px solid var(--line); border-radius:22px;
+  box-shadow:var(--shadow); cursor:pointer; user-select:none; -webkit-user-select:none;
+  overflow:hidden; will-change:transform; text-align:left;
+  padding:0; appearance:none; color:inherit; font:inherit;
+}
+.flash:active{box-shadow:var(--shadow)}
+.flash.press{transform:scale(.988); transition:transform .12s}
+.flash.drag{transition:none; box-shadow:var(--shadow-lift)}
+.flash.settle{transition:transform .34s cubic-bezier(.22,.8,.3,1)}
+.flash.out{transition:transform .26s cubic-bezier(.4,0,.7,.2), opacity .26s ease-out; opacity:0}
+.flash.in{animation:cardIn .34s cubic-bezier(.22,.9,.3,1) both}
+@keyframes cardIn{ from{ transform:translateX(var(--from,26%)) scale(.97); opacity:0 } to{ transform:none; opacity:1 } }
+
+/* front: the code, nothing else competing with it */
+.face{flex:1; display:flex; flex-direction:column; min-height:0}
+.face-q{
+  flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:var(--sp-3); padding:var(--sp-5) var(--sp-5);
+}
+.term{
+  font-family:var(--mono); font-weight:800; letter-spacing:-.035em; line-height:1;
+  font-size:clamp(56px, 17vw, 96px); white-space:nowrap; max-width:100%;
+}
+.term.long{font-size:clamp(26px, 8.5vw, 46px); letter-spacing:-.03em}
+.hint{font-size:14px; color:var(--ink-3); font-weight:500; text-align:center}
+
+/* back: definition, then the plain reading, then one example */
+/* the answer scrolls inside the card. The inner block is at least as tall as
+   the card, so a short answer sits centred and a long one starts at the top
+   and scrolls — no stranded example, no wall of white. */
+.face-a{
+  flex:1; min-height:0; display:block;
+  padding:var(--sp-5) var(--sp-5) var(--sp-4);
+  overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;
+}
+.a-in{
+  min-height:100%; display:flex; flex-direction:column; justify-content:center;
+  gap:var(--sp-3);
+}
+.def{font-size:clamp(20px,5.2vw,25px); font-weight:700; letter-spacing:-.018em; line-height:1.25; max-width:24ch}
+.says{font-size:clamp(14.5px,3.8vw,16px); color:var(--ink-2); line-height:1.55; max-width:36ch}
+.eg{display:flex; flex-direction:column; gap:6px; padding-top:var(--sp-2)}
+
+.eg-l{font-size:10.5px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--ink-3)}
+.flash .diagbtn{
+  align-self:flex-start; appearance:none; cursor:pointer; min-height:var(--tap);
+  background:var(--surface-2); border:1px solid var(--line-2); color:var(--ink-2);
+  border-radius:var(--r-pill); padding:7px 14px; font-size:13px; font-weight:600;
+  display:inline-flex; align-items:center; gap:7px;
+}
+.flash .diagbtn svg{width:16px; height:16px}
+.flash .diagbtn:active{transform:scale(.96)}
+
+/* the direction cue that appears only once a swipe is really under way */
+.flash .cue{
+  position:absolute; top:50%; transform:translateY(-50%); opacity:0; pointer-events:none;
+  width:38px; height:38px; border-radius:var(--r-pill); display:grid; place-items:center;
+  background:var(--accent-soft); color:var(--accent); border:1px solid var(--accent-line);
+}
+.flash .cue svg{width:19px; height:19px}
+.flash .cue.next{right:14px}
+.flash .cue.prev{left:14px}
+
+/* =========================================================================
+   RATING — only after the answer is showing
+   ========================================================================= */
+.rate[hidden]{display:none}
+.rate{display:grid; grid-template-columns:repeat(4,1fr); gap:var(--sp-2)}
+.rate button{
+  appearance:none; cursor:pointer; min-height:var(--tap);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+  border:1px solid var(--line-2); background:var(--surface); border-radius:14px;
+  padding:9px 4px; box-shadow:var(--shadow); transition:transform .1s, background .14s, border-color .14s;
+}
+.rate button strong{font-size:14px; font-weight:700; letter-spacing:-.01em}
+.rate button span{font-size:10.5px; color:var(--ink-3); font-weight:600; font-variant-numeric:tabular-nums}
+.rate button:active{transform:scale(.95)}
+.rate .r1{border-color:var(--bad-line)}   .rate .r1 strong{color:var(--bad)}
+.rate .r2{border-color:var(--warn-line)}  .rate .r2 strong{color:var(--warn)}
+.rate .r3{border-color:var(--accent-line)}.rate .r3 strong{color:var(--accent)}
+.rate .r4{border-color:var(--good-line)}  .rate .r4 strong{color:var(--good)}
+.rate .r1:active{background:var(--bad-soft)}
+.rate .r2:active{background:var(--warn-soft)}
+.rate .r3:active{background:var(--accent-soft)}
+.rate .r4:active{background:var(--good-soft)}
 
 /* ---------- detail rows ---------- */
 .rows{display:flex; flex-direction:column}
@@ -260,6 +353,9 @@ pre.block{
   margin:0; background:var(--surface-2); border:1px solid var(--line); border-radius:var(--r-sm);
   padding:10px 12px; font-size:13px; line-height:1.6; overflow-x:auto; white-space:pre; color:var(--ink);
 }
+/* inside a card the example wraps rather than scrolling sideways, so a
+   horizontal drag is always a swipe and never a fight with a scroll box */
+.eg pre.block{white-space:pre-wrap; overflow-x:visible; word-break:break-word}
 pre.block .w{color:var(--accent); font-weight:600}
 pre.block .c{color:var(--ink-3)}
 
@@ -445,6 +541,103 @@ pre.block .c{color:var(--ink-3)}
 .about{font-size:12.5px; color:var(--ink-3); line-height:1.55; padding:14px 16px; display:flex; flex-direction:column; gap:8px}
 .about a{color:var(--accent)}
 
+/* =========================================================================
+   HOME — continuing is the biggest, nearest thing on the screen
+   ========================================================================= */
+.hsec{display:flex; flex-direction:column; gap:var(--sp-3)}
+.hsec-h{display:flex; align-items:baseline; gap:var(--sp-2); padding:0 2px}
+.hsec-h h2{font-size:12px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--ink-3)}
+.hsec-h .more{margin-left:auto; font-size:13px; font-weight:600; color:var(--accent); background:none; border:0; cursor:pointer; padding:4px 2px; min-height:32px}
+
+.cont{
+  appearance:none; cursor:pointer; text-align:left; width:100%;
+  background:var(--accent); color:var(--accent-ink); border:0; border-radius:20px;
+  padding:var(--sp-5) var(--sp-5) calc(var(--sp-5) + 2px); box-shadow:var(--shadow-lift);
+  display:flex; align-items:center; gap:var(--sp-4); min-height:128px;
+  transition:transform .1s, filter .15s;
+}
+.cont:active{transform:scale(.985)}
+.cont .txt{flex:1; min-width:0; display:flex; flex-direction:column; gap:3px}
+.cont .eyebrow{font-size:11.5px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; opacity:.82}
+.cont .big{font-size:25px; font-weight:800; letter-spacing:-.025em; line-height:1.12}
+.cont .sub{font-size:13.5px; opacity:.85; font-variant-numeric:tabular-nums}
+.cont .go{width:44px; height:44px; flex:none; border-radius:var(--r-pill); background:rgba(255,255,255,.2); display:grid; place-items:center}
+.cont .go svg{width:22px; height:22px}
+
+.pick{display:grid; grid-template-columns:repeat(2,1fr); gap:var(--sp-3)}
+.pick button{
+  appearance:none; cursor:pointer; text-align:left; min-height:var(--tap);
+  background:var(--surface); border:1px solid var(--line); border-radius:var(--r);
+  padding:var(--sp-3) var(--sp-4) 13px; box-shadow:var(--shadow);
+  display:flex; flex-direction:column; gap:2px; transition:transform .1s, border-color .15s;
+}
+.pick button:active{transform:scale(.97)}
+.pick button:hover{border-color:var(--accent-line)}
+.pick .ic{width:28px; height:28px; border-radius:9px; display:grid; place-items:center; margin-bottom:5px}
+.pick .ic svg{width:16px; height:16px}
+.pick strong{font-size:14.5px; font-weight:700; letter-spacing:-.01em}
+.pick span{font-size:12.5px; color:var(--ink-3); font-variant-numeric:tabular-nums}
+.pick .a{background:var(--accent-soft); color:var(--accent)}
+.pick .w{background:var(--warn-soft); color:var(--warn)}
+.pick .g{background:var(--good-soft); color:var(--good)}
+.pick .n{background:var(--surface-2); color:var(--ink-3)}
+
+/* =========================================================================
+   GAMES
+   ========================================================================= */
+/* the hub, a round and a result all render into this one box, so the spacing
+   between whatever it holds belongs here rather than in each of them */
+#g-body{display:flex; flex-direction:column; gap:var(--sp-4)}
+.gtile{
+  appearance:none; cursor:pointer; text-align:left; width:100%;
+  background:var(--surface); border:1px solid var(--line); border-radius:var(--r);
+  padding:var(--sp-4); box-shadow:var(--shadow); display:flex; align-items:center; gap:var(--sp-4);
+  min-height:76px; transition:transform .1s, border-color .15s;
+}
+.gtile:active{transform:scale(.985)}
+.gtile:hover{border-color:var(--accent-line)}
+.gtile .ic{width:46px; height:46px; flex:none; border-radius:14px; display:grid; place-items:center}
+.gtile .ic svg{width:24px; height:24px}
+.gtile .txt{flex:1; min-width:0; display:flex; flex-direction:column; gap:2px}
+.gtile strong{font-size:15.5px; font-weight:700; letter-spacing:-.01em; color:var(--ink)}
+.gtile .txt span{font-size:12.5px; color:var(--ink-3); line-height:1.4}
+.gtile .best{font-size:12px; font-weight:700; color:var(--ink-3); font-variant-numeric:tabular-nums; flex:none}
+
+/* match up */
+.mgrid{display:grid; grid-template-columns:repeat(2,1fr); gap:var(--sp-2)}
+.mcell{
+  appearance:none; cursor:pointer; text-align:left; min-height:60px;
+  background:var(--surface); border:1.5px solid var(--line-2); border-radius:13px;
+  padding:10px 11px; box-shadow:var(--shadow); font-size:13px; line-height:1.35; color:var(--ink);
+  display:flex; align-items:center; transition:transform .1s, background .18s, border-color .18s, opacity .3s;
+}
+.mcell.code{font-family:var(--mono); font-size:17px; font-weight:700; letter-spacing:-.02em; justify-content:center}
+.mcell:active{transform:scale(.97)}
+.mcell[aria-pressed="true"]{border-color:var(--accent); background:var(--accent-soft); color:var(--accent)}
+.mcell.hit{border-color:var(--good); background:var(--good-soft); color:var(--good)}
+.mcell.miss{border-color:var(--bad); background:var(--bad-soft); color:var(--bad); animation:shake .3s}
+.mcell.done{opacity:0; pointer-events:none; transform:scale(.94)}
+@keyframes shake{ 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
+
+/* =========================================================================
+   SESSION SUMMARY
+   ========================================================================= */
+.sum{display:flex; flex-direction:column; align-items:center; gap:var(--sp-3); padding:var(--sp-6) var(--sp-5) var(--sp-5); text-align:center}
+.sum .ring{width:96px; height:96px}
+.sum h2{font-size:23px; font-weight:800; letter-spacing:-.02em}
+.sum p{font-size:14px; color:var(--ink-2); max-width:34ch; line-height:1.5}
+.streak{
+  display:inline-flex; align-items:center; gap:7px; padding:7px 14px; border-radius:var(--r-pill);
+  background:var(--warn-soft); color:var(--warn); border:1px solid var(--warn-line);
+  font-size:13.5px; font-weight:700;
+}
+.streak svg{width:16px; height:16px}
+.sumstats{display:grid; grid-template-columns:repeat(3,1fr); gap:var(--sp-2); width:100%}
+.sumstats div{background:var(--surface-2); border-radius:12px; padding:10px 6px; text-align:center}
+.sumstats b{display:block; font-family:var(--mono); font-size:21px; font-weight:600; letter-spacing:-.02em}
+.sumstats span{font-size:10.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-3)}
+.again-opts{display:flex; flex-direction:column; gap:var(--sp-2); width:100%}
+
 /* ---------- toast ---------- */
 .toast{
   position:fixed; left:50%; bottom:calc(var(--tabh) + 20px + env(safe-area-inset-bottom,0px)); transform:translate(-50%,10px);
@@ -480,6 +673,83 @@ pre.block .c{color:var(--ink-3)}
 
 <main>
 
+<!-- ========================= HOME ========================= -->
+<section class="view" id="v-home" role="tabpanel" aria-labelledby="tab-home">
+  <div class="hsec">
+    <button class="cont" type="button" id="h-continue">
+      <span class="txt">
+        <span class="eyebrow" id="h-eyebrow">Continue studying</span>
+        <span class="big" id="h-title">All codes</span>
+        <span class="sub" id="h-sub">63 cards</span>
+      </span>
+      <span class="go" id="h-go"></span>
+    </button>
+  </div>
+
+  <div class="hsec">
+    <div class="hsec-h"><h2>My decks</h2></div>
+    <div class="pick" id="h-decks"></div>
+  </div>
+
+  <div class="hsec">
+    <div class="hsec-h"><h2>Games</h2><button class="more" type="button" data-goto="games">All games</button></div>
+    <div id="h-games" class="hsec" style="gap:var(--sp-2)"></div>
+  </div>
+
+  <div class="hsec">
+    <div class="hsec-h"><h2>Progress</h2><button class="more" type="button" data-goto="progress">Details</button></div>
+    <div class="card"><div class="card-pad" id="h-progress"></div></div>
+  </div>
+</section>
+
+<!-- ======================== STUDY ========================= -->
+<section class="view" id="v-study" role="tabpanel" aria-labelledby="tab-study" hidden>
+  <div class="studywrap" id="s-live">
+    <div class="strip">
+      <span class="txt" id="s-count">0 of 0</span>
+      <span class="bar"><i id="s-bar" style="width:0%"></i></span>
+      <button class="starbtn" type="button" id="s-star" aria-pressed="false" aria-label="Mark this card for extra practice"></button>
+    </div>
+
+    <div class="focusbar" id="s-focus" hidden>
+      <span id="s-focus-label"></span>
+      <button class="linkbtn" type="button" id="s-focus-clear">All codes</button>
+    </div>
+
+    <div class="deck" id="deck"></div>
+
+
+    <div class="rate" id="s-rate" hidden>
+      <button class="r1" type="button" data-rate="again"><strong>Again</strong><span id="rl-again"></span></button>
+      <button class="r2" type="button" data-rate="hard"><strong>Hard</strong><span id="rl-hard"></span></button>
+      <button class="r3" type="button" data-rate="good"><strong>Good</strong><span id="rl-good"></span></button>
+      <button class="r4" type="button" data-rate="easy"><strong>Easy</strong><span id="rl-easy"></span></button>
+    </div>
+  </div>
+
+  <div id="s-done" hidden></div>
+</section>
+
+<!-- ======================== BROWSE ======================== -->
+<section class="view" id="v-browse" role="tabpanel" aria-labelledby="tab-browse" hidden>
+  <div class="searchwrap">
+    <input class="search" id="b-search" type="search" placeholder="Search a code or what it does" aria-label="Search codes" spellcheck="false">
+  </div>
+  <div class="chips" role="group" aria-label="Filter">
+    <button class="chip" type="button" data-bdeck="all" aria-pressed="true">All</button>
+    <button class="chip" type="button" data-bdeck="G" aria-pressed="false">G-Code</button>
+    <button class="chip" type="button" data-bdeck="M" aria-pressed="false">M-Code</button>
+    <button class="chip" type="button" data-bdeck="star" aria-pressed="false">Starred</button>
+    <button class="chip" type="button" data-bdeck="todo" aria-pressed="false">Not learned</button>
+  </div>
+  <div id="b-body"></div>
+</section>
+
+<!-- ========================= GAMES ======================== -->
+<section class="view" id="v-games" role="tabpanel" aria-labelledby="tab-games" hidden>
+  <div id="g-body"></div>
+</section>
+
 <!-- ======================= PROGRESS ======================= -->
 <section class="view" id="v-progress" role="tabpanel" aria-labelledby="tab-progress" hidden>
   <div class="card">
@@ -489,10 +759,10 @@ pre.block .c{color:var(--ink-3)}
         <circle class="fill" id="ring-fill" cx="60" cy="60" r="50" fill="none" stroke-width="11"
                 transform="rotate(-90 60 60)" stroke-dasharray="314.159" stroke-dashoffset="314.159"/>
         <text class="pct" id="ring-pct" x="60" y="57" text-anchor="middle">0%</text>
-        <text class="pct-sub" x="60" y="74" text-anchor="middle">MASTERED</text>
+        <text class="pct-sub" x="60" y="74" text-anchor="middle">LEARNED</text>
       </svg>
       <div class="side">
-        <div class="kv"><i style="background:var(--accent)"></i><b id="p-mastered">0</b> mastered</div>
+        <div class="kv"><i style="background:var(--accent)"></i><b id="p-mastered">0</b> learned</div>
         <div class="kv"><i style="background:var(--accent-line)"></i><b id="p-learning">0</b> learning</div>
         <div class="kv"><i style="background:var(--line-2)"></i><b id="p-new">0</b> not started</div>
         <div class="kv" style="color:var(--ink-3)"><i style="background:transparent"></i><b id="p-total">63</b> on the sheets</div>
@@ -501,10 +771,10 @@ pre.block .c{color:var(--ink-3)}
   </div>
 
   <div class="tiles two">
+    <div class="tile"><span>Day streak</span><b id="p-streak">0</b></div>
     <div class="tile"><span>Answered</span><b id="p-seen">0</b></div>
-    <div class="tile"><span>Best streak</span><b id="p-best">0</b></div>
+    <div class="tile"><span>Starred</span><b id="p-star">0</b></div>
     <div class="tile"><span>Rush high</span><b id="p-ghigh">0</b></div>
-    <div class="tile"><span>Rounds</span><b id="p-gplays">0</b></div>
   </div>
 
   <div class="card">
@@ -524,78 +794,13 @@ pre.block .c{color:var(--ink-3)}
       <span><i style="background:var(--surface-2)"></i>New</span>
       <span><i style="background:var(--bad-soft); border-color:var(--bad-line)"></i>Shaky</span>
       <span><i style="background:var(--warn-soft); border-color:var(--warn-line)"></i>Getting there</span>
-      <span><i style="background:var(--good-soft); border-color:var(--good-line)"></i>Mastered</span>
+      <span><i style="background:var(--good-soft); border-color:var(--good-line)"></i>Learned</span>
     </div>
   </div>
-</section>
-
-<!-- ======================== STUDY ========================= -->
-<section class="view" id="v-study" role="tabpanel" aria-labelledby="tab-study">
-  <div class="card">
-    <div class="card-head"><h2>Study Progress</h2><span class="n" id="s-count">0 / 63</span></div>
-    <div class="card-pad" style="display:flex; flex-direction:column; gap:9px">
-      <div class="bar split" role="img" aria-label="Study progress"><i class="m" id="s-bar-m" style="width:0%"></i><i class="l" id="s-bar-l" style="width:0%"></i></div>
-      <div class="legend-dots">
-        <span><b id="s-mastered">0</b> Mastered</span><span><b id="s-learning">0</b> Learning</span><span><b id="s-new">0</b> New</span>
-      </div>
-    </div>
-  </div>
-
-  <div class="chips" role="group" aria-label="Deck">
-    <button class="chip" type="button" data-deck="all" aria-pressed="true">All</button>
-    <button class="chip" type="button" data-deck="G" aria-pressed="false">G-Code</button>
-    <button class="chip" type="button" data-deck="M" aria-pressed="false">M-Code</button>
-    <button class="chip push" type="button" id="btn-shuffle">Shuffle</button>
-  </div>
-
-  <div class="focusbar" id="s-focus" hidden>
-    <span id="s-focus-label"></span>
-    <button class="linkbtn" type="button" id="s-focus-clear">Back to all codes</button>
-  </div>
-
-  <div class="deck" id="deck"></div>
-
-  <div class="swipe" id="swipe">
-    <button class="swipeact no" type="button" data-grade="again">
-      <span class="ring"></span>
-      <strong>Need Practice</strong>
-      <em>Swipe left<br>to practice more</em>
-    </button>
-    <div class="rule"></div>
-    <button class="swipeact yes" type="button" data-grade="good">
-      <span class="ring"></span>
-      <strong>Know It</strong>
-      <em>Swipe right<br>to mark as known</em>
-    </button>
-  </div>
-
-  <div class="card" id="s-detail" hidden>
-    <div class="card-head"><h2>Code Details</h2></div>
-    <div class="rows" id="s-rows"></div>
-  </div>
-</section>
-
-<!-- ======================== BROWSE ======================== -->
-<section class="view" id="v-browse" role="tabpanel" aria-labelledby="tab-browse" hidden>
-  <div class="searchwrap">
-    <input class="search" id="b-search" type="search" placeholder="Search a code or what it does" aria-label="Search codes" spellcheck="false">
-  </div>
-  <div class="chips" role="group" aria-label="Filter">
-    <button class="chip" type="button" data-bdeck="all" aria-pressed="true">All</button>
-    <button class="chip" type="button" data-bdeck="G" aria-pressed="false">G-Code</button>
-    <button class="chip" type="button" data-bdeck="M" aria-pressed="false">M-Code</button>
-    <button class="chip" type="button" data-bdeck="todo" aria-pressed="false">Not mastered</button>
-  </div>
-  <div id="b-body"></div>
-</section>
-
-<!-- ========================= GAME ========================= -->
-<section class="view" id="v-game" role="tabpanel" aria-labelledby="tab-game" hidden>
-  <div id="g-body"></div>
 </section>
 
 <!-- ======================= SETTINGS ======================= -->
-<section class="view" id="v-settings" role="tabpanel" aria-labelledby="tab-settings" hidden>
+<section class="view" id="v-settings" role="tabpanel" aria-label="Settings" hidden>
   <div class="card">
     <div class="card-head"><h2>Appearance</h2></div>
     <div class="setrow stack">
@@ -626,16 +831,12 @@ pre.block .c{color:var(--ink-3)}
       <div class="txt"><h3>Shop-floor notes</h3><p>Show the caution written for each code with its answer.</p></div>
       <label class="switch ctl"><input type="checkbox" id="set-tips" checked><i></i><span class="sr">Shop-floor notes</span></label>
     </div>
-    <div class="setrow">
-      <div class="txt"><h3>Auto-reveal on swipe</h3><p>Grading an unrevealed card shows you the answer before moving on.</p></div>
-      <label class="switch ctl"><input type="checkbox" id="set-peek"><i></i><span class="sr">Auto-reveal on swipe</span></label>
-    </div>
   </div>
 
   <div class="card">
     <div class="card-head"><h2>Data</h2></div>
     <div class="setrow stack">
-      <div class="txt"><h3>Progress lives on this device</h3><p>Boxes, streaks and high scores are kept in this browser's storage and are shared with the full Rapid&nbsp;Traverse trainer. Nothing is uploaded.</p></div>
+      <div class="txt"><h3>Progress lives on this device</h3><p>Levels, streaks and high scores are kept in this browser's storage and are shared with the full Rapid&nbsp;Traverse trainer. Nothing is uploaded.</p></div>
       <button class="btn sec wide" type="button" id="set-reset-game">Reset game scores</button>
       <button class="btn danger wide" type="button" id="set-reset">Reset all study progress</button>
     </div>
@@ -655,11 +856,11 @@ pre.block .c{color:var(--ink-3)}
 
 <nav class="tabbar">
   <div class="tabbar-in" role="tablist" aria-label="Sections">
-    <button class="tab" id="tab-progress" role="tab" data-tab="progress" aria-selected="false" aria-controls="v-progress"></button>
-    <button class="tab" id="tab-study" role="tab" data-tab="study" aria-selected="true" aria-controls="v-study"></button>
+    <button class="tab" id="tab-home" role="tab" data-tab="home" aria-selected="true" aria-controls="v-home"></button>
+    <button class="tab" id="tab-study" role="tab" data-tab="study" aria-selected="false" aria-controls="v-study"></button>
     <button class="tab" id="tab-browse" role="tab" data-tab="browse" aria-selected="false" aria-controls="v-browse"></button>
-    <button class="tab" id="tab-game" role="tab" data-tab="game" aria-selected="false" aria-controls="v-game"></button>
-    <button class="tab" id="tab-settings" role="tab" data-tab="settings" aria-selected="false" aria-controls="v-settings"></button>
+    <button class="tab" id="tab-games" role="tab" data-tab="games" aria-selected="false" aria-controls="v-games"></button>
+    <button class="tab" id="tab-progress" role="tab" data-tab="progress" aria-selected="false" aria-controls="v-progress"></button>
   </div>
 </nav>
 
@@ -711,7 +912,13 @@ const ICONS = {
   x:'<path d="M5.5 5.5 18.5 18.5M18.5 5.5 5.5 18.5"/>',
   bolt:'<path d="M13.5 2.5 4 14h7l-.5 7.5L20 10h-7z"/>',
   replayico:'<path d="M20.5 12a8.5 8.5 0 1 1-2.6-6.1"/><path d="M20.5 3.5V9H15"/>',
-  target:'<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/>'
+  target:'<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/>',
+  home:'<path d="M3.5 10.5 12 3.5l8.5 7"/><path d="M5.5 9.5V20a.5.5 0 0 0 .5.5h12a.5.5 0 0 0 .5-.5V9.5"/><path d="M9.5 20.5v-6h5v6"/>',
+  games:'<rect x="2.5" y="6.5" width="19" height="11" rx="4.5"/><path d="M7 10v4M5 12h4"/><circle cx="16" cy="11" r="1.1" fill="currentColor" stroke="none"/><circle cx="18.4" cy="13.6" r="1.1" fill="currentColor" stroke="none"/>',
+  star:'<path d="M12 3.6l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 9.8l5.9-.9z"/>',
+  flame:'<path d="M12 2.5s5.5 4.2 5.5 9.3a5.5 5.5 0 0 1-11 0c0-1.9.8-3.5 1.7-4.7.3 1.2 1 2.1 1.9 2.1 1.3 0 1.6-1.5 1.6-3 0-1.4-.3-2.6.3-3.7z"/>',
+  grid2:'<rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/>',
+  clock:'<circle cx="12" cy="12" r="8.6"/><path d="M12 7.2V12l3.2 2"/>'
 };
 function ico(n, extra){
   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" ' +
@@ -719,7 +926,10 @@ function ico(n, extra){
          (ICONS[n] || '') + '</svg>';
 }
 
-/* ---- storage: boxes are shared with the full trainer, prefs are ours ---- */
+/* ---- storage ----------------------------------------------------------
+   PROG.boxes stays in the shape the full trainer reads, so a code learned
+   here still shows as learned there. The scheduling that drives this app
+   lives beside it in our own key. */
 const LS_BOXES = 'rapid-traverse-v1';
 const LS_APP   = 'cnc-study-v1';
 function readJSON(k, fallback){
@@ -731,12 +941,14 @@ const PROG = readJSON(LS_BOXES, { boxes:{}, seen:0, best:0 });
 if (!PROG.boxes || typeof PROG.boxes !== 'object') PROG.boxes = {};
 
 const APP = Object.assign(
-  { theme:'system', deck:'all', visuals:true, tips:true, peek:false, tab:'study',
-    touched:{}, game:{ best:0, plays:0, bestStreak:0 } },
+  { theme:'system', deck:'all', visuals:true, tips:true, tab:'home',
+    srs:{}, star:{}, flips:0, streak:{ n:0, last:'' },
+    game:{ best:0, plays:0, bestStreak:0, matchBest:0 } },
   readJSON(LS_APP, {})
 );
-if (!APP.touched || typeof APP.touched !== 'object') APP.touched = {};
-if (!APP.game) APP.game = { best:0, plays:0, bestStreak:0 };
+['srs','star','game','streak'].forEach(k => { if (!APP[k] || typeof APP[k] !== 'object') APP[k] = {}; });
+if (typeof APP.flips !== 'number') APP.flips = 0;
+if (typeof APP.streak.n !== 'number') APP.streak = { n:0, last:'' };
 
 function saveProg(){ try { localStorage.setItem(LS_BOXES, JSON.stringify(PROG)); } catch (e){} }
 function saveApp(){  try { localStorage.setItem(LS_APP,  JSON.stringify(APP));  } catch (e){} }
@@ -753,14 +965,93 @@ function shuffled(arr){
   return a;
 }
 
-const boxOf     = c => PROG.boxes[c] || 0;
-const isMaster  = c => boxOf(c) >= 5;
-const isTouched = c => !!APP.touched[c] || boxOf(c) > 0;
+/* ---- spaced repetition -------------------------------------------------
+   Five levels. Getting one right moves it up and pushes it further out;
+   getting it wrong drops it to the bottom and brings it straight back. The
+   effect is that new, missed and shaky codes come round often and the ones
+   you keep getting right get out of the way. */
+const DAY = 86400000;
+const STEPS = [0, 1, 2, 4, 9, 21];          /* days between sightings, by level */
+const today = () => new Date().toISOString().slice(0, 10);
+
+function rec(c){
+  let r = APP.srs[c];
+  if (!r || typeof r !== 'object'){
+    /* a code the full trainer already knows starts from what it recorded */
+    const lvl = Math.min(5, PROG.boxes[c] || 0);
+    r = APP.srs[c] = { lvl: lvl, due: 0, reps: 0, lapses: 0, last: 0, wrong: false };
+  }
+  return r;
+}
+const levelOf = c => rec(c).lvl;
+const isLearned = c => levelOf(c) >= 4;
+const isSeen    = c => rec(c).reps > 0 || (PROG.boxes[c] || 0) > 0;
+const isDue     = c => isSeen(c) && rec(c).due <= Date.now();
+const isNew     = c => !isSeen(c);
+const isStar    = c => !!APP.star[c];
+/* shaky: known to you, but you have dropped it more than once or it sits low */
+const isShaky   = c => isSeen(c) && (rec(c).lapses >= 2 || rec(c).lvl <= 1);
+
+/* how long until this card comes round again, for the button captions */
+function previewGap(c, rating){
+  const r = rec(c);
+  const lvl = rating === 'again' ? 0
+            : rating === 'hard'  ? Math.max(0, r.lvl)
+            : rating === 'easy'  ? Math.min(5, r.lvl + 2)
+            : Math.min(5, r.lvl + 1);
+  const d = rating === 'again' ? 0 : rating === 'hard' ? Math.max(1, STEPS[lvl] - 1) : STEPS[lvl];
+  return d === 0 ? 'soon' : d === 1 ? '1 day' : d + ' days';
+}
+
+function applyRating(c, rating){
+  const r = rec(c);
+  r.reps++;
+  r.last = Date.now();
+  if (rating === 'again'){
+    if (r.lvl > 0) r.lapses++;
+    r.lvl = 0; r.wrong = true;
+    r.due = Date.now();
+  } else {
+    r.wrong = false;
+    r.lvl = rating === 'hard' ? Math.max(0, r.lvl)
+          : rating === 'easy' ? Math.min(5, r.lvl + 2)
+          : Math.min(5, r.lvl + 1);
+    const days = rating === 'hard' ? Math.max(1, STEPS[r.lvl] - 1) : STEPS[r.lvl];
+    r.due = Date.now() + days * DAY;
+  }
+  PROG.boxes[c] = r.lvl;                    /* keep the trainer's meter honest */
+  PROG.seen = (PROG.seen || 0) + 1;
+  saveProg(); saveApp();
+}
+
+/* a miss in a game is a real signal, so it counts — but a lucky tap is not
+   a study rep, so a hit never promotes a card */
+function gameResult(c, right){
+  const r = rec(c);
+  if (!right){ if (r.lvl > 0) r.lapses++; r.lvl = Math.max(0, r.lvl - 1); r.wrong = true; r.due = Date.now(); }
+  PROG.boxes[c] = r.lvl;
+  saveApp(); saveProg();
+}
+
+function bumpStreak(){
+  const d = today();
+  if (APP.streak.last === d) return;
+  const y = new Date(Date.now() - DAY).toISOString().slice(0, 10);
+  APP.streak.n = APP.streak.last === y ? (APP.streak.n || 0) + 1 : 1;
+  APP.streak.last = d;
+  saveApp();
+}
+
 function tally(list){
   let m = 0, l = 0;
-  list.forEach(c => { if (isMaster(c.c)) m++; else if (isTouched(c.c)) l++; });
+  list.forEach(c => { if (isLearned(c.c)) m++; else if (isSeen(c.c)) l++; });
   return { mastered:m, learning:l, fresh:list.length - m - l, total:list.length };
 }
+
+/* ---- feedback ----------------------------------------------------------
+   A short buzz where the device offers one. iOS Safari does not, so every
+   action also carries a visible response and never depends on this. */
+function tick(ms){ try { if (navigator.vibrate) navigator.vibrate(ms || 8); } catch (e){} }
 
 /* ---- toast ---- */
 let toastT = 0;
@@ -788,8 +1079,8 @@ mqDark.addEventListener('change', () => { if (APP.theme === 'system') applyTheme
 
 /* ---- tabs ---- */
 const TABS = [
-  { id:'progress', label:'Progress' }, { id:'study', label:'Study' }, { id:'browse', label:'Browse' },
-  { id:'game', label:'Game' }, { id:'settings', label:'Settings' }
+  { id:'home', label:'Home' }, { id:'study', label:'Study' }, { id:'browse', label:'Browse' },
+  { id:'games', label:'Games' }, { id:'progress', label:'Progress' }
 ];
 function paintTabBar(){
   TABS.forEach(t => {
@@ -798,122 +1089,378 @@ function paintTabBar(){
   });
 }
 function go(tab){
-  if (!TABS.some(t => t.id === tab)) tab = 'study';
-  S.tab = tab; APP.tab = tab; saveApp();
+  const known = TABS.some(t => t.id === tab) || tab === 'settings';
+  if (!known) tab = 'home';
+  S.tab = tab; APP.tab = tab === 'settings' ? 'home' : tab; saveApp();
   TABS.forEach(t => {
     const sel = t.id === tab;
     document.getElementById('tab-' + t.id).setAttribute('aria-selected', String(sel));
     document.getElementById('v-' + t.id).hidden = !sel;
   });
+  document.getElementById('v-settings').hidden = tab !== 'settings';
+  if (tab === 'home')     paintHome();
   if (tab === 'progress') paintProgress();
-  if (tab === 'browse')  paintBrowse();
-  if (tab === 'game')    { resumeGame(); paintGame(); } else pauseGame();
+  if (tab === 'browse')   paintBrowse();
+  if (tab === 'games')    { resumeGame(); paintGame(); } else pauseGame();
   if (tab !== 'browse' && B.demo){ B.demo.stop(); B.demo = null; }
-  if (tab !== 'study')   stopDemo();
-  else if (S.open)       mountDetail();
+  if (tab !== 'study')    stopDemo();
   window.scrollTo({ top:0, behavior:'auto' });
 }
 
-/* ------------------------------ 2 · STUDY ----------------------------- */
+/* ------------------------------ 2 · STUDY -----------------------------
+   The screen holds a progress strip, one card, and — once you have turned
+   it over — four buttons. Nothing else. Swiping moves between cards;
+   rating is what schedules them.
+   ----------------------------------------------------------------------- */
 
-const S = { tab:'study', deck:APP.deck || 'all', queue:[], open:false, demo:null, streak:0, busy:false, only:null };
+const SOURCES = {
+  all:   { name:'All codes',     pick: () => CARDS.slice() },
+  G:     { name:'G codes',       pick: () => CARDS.filter(c => c.f === 'G') },
+  M:     { name:'M codes',       pick: () => CARDS.filter(c => c.f === 'M') },
+  star:  { name:'Needs practice',pick: () => CARDS.filter(c => isStar(c.c)) },
+  due:   { name:'Due today',     pick: () => CARDS.filter(c => isDue(c.c)) },
+  fresh: { name:'New codes',     pick: () => CARDS.filter(c => isNew(c.c)) },
+  wrong: { name:'Missed last time', pick: () => CARDS.filter(c => rec(c.c).wrong) },
+  shaky: { name:'Difficult',     pick: () => CARDS.filter(c => isShaky(c.c)) }
+};
 
-function deckCards(){
+const S = {
+  tab:'home', src:null, queue:[], i:0, open:false, demo:null, busy:false,
+  session:null, only:null, onlyName:''
+};
+
+function srcCards(){
   if (S.only) return S.only.map(c => BY_CODE[c]).filter(Boolean);
-  return CARDS.filter(c => S.deck === 'all' || c.f === S.deck);
+  return (SOURCES[S.src] || SOURCES.all).pick();
 }
-function buildQueue(shuffle){
-  const list = deckCards().slice();
-  const r = new Map();
-  list.forEach(c => r.set(c.c, Math.random()));
-  list.sort((a, b) => shuffle ? r.get(a.c) - r.get(b.c)
-                              : (boxOf(a.c) - boxOf(b.c)) || (r.get(a.c) - r.get(b.c)));
-  S.queue = list.filter(c => !isMaster(c.c)).map(c => c.c);
-  if (!S.queue.length) S.queue = list.map(c => c.c);
-  S.open = false;
-}
-const current = () => BY_CODE[S.queue[0]];
+function srcName(){ return S.only ? (S.onlyName || 'Selected codes') : (SOURCES[S.src] || SOURCES.all).name; }
 
+/* Order: anything overdue first, then codes you have never seen, then the
+   rest by how shaky they are. That is the whole "prioritise weak and new". */
+function orderCards(list){
+  const now = Date.now();
+  const rank = c => {
+    const r = rec(c.c);
+    if (!isSeen(c.c)) return 1;               /* new comes early, after overdue */
+    if (r.due <= now) return 0;
+    return 2;
+  };
+  return list
+    .map(c => ({ c, k:rank(c), lvl:rec(c.c).lvl, lap:rec(c.c).lapses, j:Math.random() }))
+    .sort((a, b) => a.k - b.k || a.lvl - b.lvl || b.lap - a.lap || a.j - b.j)
+    .map(x => x.c);
+}
+
+function startSession(src, only, onlyName){
+  S.src = only ? S.src : (src || S.src);
+  S.only = only || null;
+  S.onlyName = onlyName || '';
+  const list = srcCards();
+  S.queue = orderCards(list).map(c => c.c);
+  S.i = 0;
+  S.open = false;
+  S.session = { studied:0, right:0, again:0, missed:[], total:S.queue.length };
+  $('#s-done').hidden = true;
+  $('#s-live').hidden = false;
+  renderCard();
+}
+
+const current = () => BY_CODE[S.queue[S.i]];
 function stopDemo(){ if (S.demo){ S.demo.stop(); S.demo = null; } }
 
-function paintStudyHead(){
-  const fb = $('#s-focus');
-  fb.hidden = !S.only;
-  if (S.only){
-    $('#s-focus-label').innerHTML = ico('target') +
-      ' Focused on ' + S.only.length + ' code' + (S.only.length === 1 ? '' : 's');
+/* ---- the strip ---- */
+function paintStrip(){
+  const n = S.queue.length;
+  $('#s-count').textContent = n ? (S.i + 1) + ' of ' + n : '0 of 0';
+  $('#s-bar').style.width = (n ? (S.i + (S.open ? 1 : 0)) / n * 100 : 0) + '%';
+  const c = current();
+  const st = $('#s-star');
+  st.hidden = !c;
+  if (c){
+    const on = isStar(c.c);
+    st.setAttribute('aria-pressed', String(on));
+    st.innerHTML = ico('star');
+    st.setAttribute('aria-label', on ? 'Remove ' + c.c + ' from Needs practice' : 'Add ' + c.c + ' to Needs practice');
   }
-  const t = tally(deckCards());
-  const done = t.mastered + t.learning;
-  $('#s-count').textContent = done + ' / ' + t.total;
-  $('#s-bar-m').style.width = (t.total ? t.mastered / t.total * 100 : 0) + '%';
-  $('#s-bar-l').style.width = (t.total ? t.learning / t.total * 100 : 0) + '%';
-  $('#s-mastered').textContent = t.mastered;
-  $('#s-learning').textContent = t.learning;
-  $('#s-new').textContent = t.fresh;
+  const fb = $('#s-focus');
+  fb.hidden = !(S.only || S.src !== 'all');
+  if (!fb.hidden){
+    $('#s-focus-label').innerHTML = ico('target') + ' ' + esc(srcName());
+  }
 }
 
-const isLongCode = code => code.length > 6;
-
-function cardFaceHTML(c){
-  const b = boxOf(c.c);
-  const long = isLongCode(c.c) ? ' long' : '';
-  const dots = Array.from({ length:5 }, (_, i) => '<i class="' + (i < b ? 'on' : '') + '"></i>').join('');
-  const mid = S.open
-    ? '<div class="bigcode sm' + long + '">' + esc(c.c) + '</div>' +
-      '<p class="answer">' + esc(c.desc) + '</p>' +
-      '<p class="answer-sub">' + esc(c.plain) + '</p>'
-    : '<div class="bigcode' + long + '">' + esc(c.c) + '</div>' +
-      '<p class="tapline">Tap card to reveal answer</p>';
-  return '<div class="fcard-top">' +
-      '<span class="tag ' + (c.f === 'G' ? 'g' : 'm') + '">' + (c.f === 'G' ? 'G code' : 'M code') + '</span>' +
-      '<span class="tag">' + esc(c.cat) + '</span>' +
-      (c.mg && c.mg !== '—' ? '<span class="tag">Group ' + esc(c.mg) + '</span>' : '') +
-      '<span class="boxdots" title="Leitner box ' + b + ' of 5">' + dots + '</span>' +
-    '</div>' +
-    '<div class="fcard-mid">' + mid + '</div>' +
-    '<span class="verdict yes">Know it</span><span class="verdict no">Practice</span>';
+/* ---- the card ---- */
+function faceHTML(c){
+  if (!S.open){
+    /* front: the code and nothing to compete with it */
+    return '<div class="face"><div class="face-q">' +
+      '<div class="term' + (c.c.length > 6 ? ' long' : '') + '">' + esc(c.c) + '</div>' +
+      (APP.flips < 4 ? '<p class="hint">Tap card to reveal answer</p>' : '') +
+    '</div></div>' +
+    '<span class="cue prev">' + ico('left') + '</span><span class="cue next">' + ico('right') + '</span>';
+  }
+  /* back: the definition, how to read it, one example. Not the code again. */
+  return '<div class="face"><div class="face-a"><div class="a-in">' +
+      '<p class="def">' + esc(c.desc) + '</p>' +
+      '<p class="says">' + esc(c.plain) + '</p>' +
+      '<div class="eg">' +
+        '<span class="eg-l">Example</span>' +
+        '<pre class="block">' + hiBlock(c.blk) + '</pre>' +
+        (APP.visuals ? '<button class="diagbtn" type="button" data-diag="1">' + ico('visual') + 'Show the diagram</button>' : '') +
+      '</div>' +
+    '</div></div></div>' +
+    '<span class="cue prev">' + ico('left') + '</span><span class="cue next">' + ico('right') + '</span>';
 }
 
-function renderCard(){
-  const hadFocus = document.activeElement && document.activeElement.id === 'fcard';
+function renderCard(dir){
   stopDemo();
   const deck = $('#deck');
-  paintStudyHead();
-  if (!S.queue.length){ renderCleared(); return; }
+  if (!S.queue.length || S.i >= S.queue.length){ renderDone(); return; }
   const c = current();
-  deck.innerHTML = '<article class="fcard" id="fcard" tabindex="0" role="button" ' +
-    'aria-label="Flash card ' + esc(c.c) + ' — activate to reveal the answer">' + cardFaceHTML(c) + '</article>';
-  $('#swipe').hidden = false;
-  wireCard($('#fcard'));
-  if (hadFocus) $('#fcard').focus();
-  if (S.open) mountDetail(); else { $('#s-detail').hidden = true; $('#s-rows').innerHTML = ''; }
+  deck.innerHTML = '<div class="flash" id="flash" tabindex="0" role="button" ' +
+    'aria-label="' + esc(c.c) + (S.open ? ' — answer showing' : ' — tap to reveal the answer') + '">' +
+    faceHTML(c) + '</div>';
+  const el = $('#flash');
+  if (dir){
+    el.style.setProperty('--from', dir > 0 ? '26%' : '-26%');
+    el.classList.add('in');
+    el.addEventListener('animationend', () => el.classList.remove('in'), { once:true });
+  }
+  wireCard(el);
+  $('#s-rate').hidden = !S.open;
+  if (S.open) paintRateLabels(c);
+  paintStrip();
 }
 
-function renderCleared(){
-  const t = tally(deckCards());
-  $('#deck').innerHTML =
-    '<div class="card" style="text-align:center; padding:30px 20px; display:flex; flex-direction:column; align-items:center; gap:10px">' +
-      '<div class="hero" style="padding:0"><div class="orb">' + ico('check') + '</div></div>' +
-      '<h2 style="font-size:21px; font-weight:800; letter-spacing:-.02em">Deck cleared</h2>' +
-      '<p style="font-size:14px; color:var(--ink-2); max-width:32ch">Every card in this deck is in box 5. ' +
-      'Run it again to keep them sharp, or switch decks.</p>' +
-      '<div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:6px">' +
-        '<button class="btn" type="button" data-act="again">' + ico('replayico') + 'Run it again</button>' +
-        (S.only ? '<button class="btn sec" type="button" data-act="full">Back to the full deck</button>' : '') +
+function paintRateLabels(c){
+  $('#rl-again').textContent = previewGap(c.c, 'again');
+  $('#rl-hard').textContent  = previewGap(c.c, 'hard');
+  $('#rl-good').textContent  = previewGap(c.c, 'good');
+  $('#rl-easy').textContent  = previewGap(c.c, 'easy');
+}
+
+function flip(){
+  if (S.open || !S.queue.length) return;
+  S.open = true;
+  APP.flips++; saveApp();
+  tick(8);
+  renderCard();
+}
+
+/* ---- rating: the only thing that schedules a card ---- */
+function rate(r){
+  if (!S.queue.length || S.busy) return;
+  const c = current();
+  applyRating(c.c, r);
+  bumpStreak();
+  const ses = S.session;
+  if (ses){
+    ses.studied++;
+    if (r === 'again'){ ses.again++; if (ses.missed.indexOf(c.c) < 0) ses.missed.push(c.c); }
+    else ses.right++;
+  }
+  tick(r === 'again' ? [8, 40, 8] : 10);
+  /* Again brings it back a few cards later, in this same session */
+  if (r === 'again'){
+    S.queue.splice(Math.min(S.i + 4, S.queue.length), 0, c.c);
+  }
+  advance(1);
+}
+
+function advance(dir){
+  if (S.busy) return;
+  const el = $('#flash');
+  const step = () => {
+    S.i += dir;
+    if (S.i < 0) S.i = 0;
+    S.open = false;
+    S.busy = false;
+    renderCard(dir);
+  };
+  if (!el || REDUCED){ step(); return; }
+  S.busy = true;
+  el.classList.remove('drag', 'settle');
+  el.classList.add('out');
+  el.style.transform = 'translateX(' + (dir > 0 ? -115 : 115) + '%) rotate(' + (dir > 0 ? -3 : 3) + 'deg)';
+  setTimeout(step, 250);
+}
+
+/* ---- gestures ---------------------------------------------------------
+   The card does not move at all until the finger has clearly committed to
+   a horizontal drag, and then it starts from where the threshold was
+   crossed rather than jumping. A tap that never crosses it flips. */
+const LOCK = 12;      /* travel before we call it a drag at all */
+const GO   = 74;      /* travel before releasing counts as a swipe */
+
+function wireCard(card){
+  let id = null, x0 = 0, y0 = 0, dx = 0, lock = null, t0 = 0, hit = null;
+
+  const cue = (v) => {
+    const k = Math.min(1, Math.abs(v) / GO);
+    const nx = card.querySelector('.cue.next'), pv = card.querySelector('.cue.prev');
+    if (nx) nx.style.opacity = v < 0 ? k : 0;
+    if (pv) pv.style.opacity = v > 0 ? k : 0;
+  };
+  const reset = () => {
+    card.classList.remove('drag', 'press');
+    card.classList.add('settle');
+    card.style.transform = '';
+    cue(0);
+    setTimeout(() => card.classList.remove('settle'), 360);
+  };
+
+  card.addEventListener('pointerdown', e => {
+    if (S.busy || (e.button !== undefined && e.button !== 0)) return;
+    id = e.pointerId; x0 = e.clientX; y0 = e.clientY; dx = 0; lock = null; t0 = Date.now();
+    /* the card captures the pointer, so a button inside it would never see a
+       click of its own — remember what the press landed on instead */
+    hit = e.target && e.target.closest ? e.target.closest('[data-diag]') : null;
+    card.classList.add('press');
+    card.classList.remove('settle');
+    try { card.setPointerCapture(id); } catch (err){}
+  });
+
+  card.addEventListener('pointermove', e => {
+    if (id === null || e.pointerId !== id) return;
+    const mx = e.clientX - x0, my = e.clientY - y0;
+    if (lock === null){
+      if (Math.abs(mx) < LOCK && Math.abs(my) < LOCK) return;   /* still a press */
+      lock = Math.abs(mx) > Math.abs(my) ? 'x' : 'y';
+      card.classList.remove('press');
+      if (lock === 'x') card.classList.add('drag');
+    }
+    if (lock !== 'x') return;
+    if (e.cancelable) e.preventDefault();
+    /* start from zero at the threshold so the card never jumps */
+    dx = mx - Math.sign(mx) * LOCK;
+    card.style.transform = 'translateX(' + dx + 'px) rotate(' + (dx / 40) + 'deg)';
+    cue(dx);
+  });
+
+  function end(e){
+    if (id === null || (e && e.pointerId !== id)) return;
+    try { card.releasePointerCapture(id); } catch (err){}
+    id = null;
+    card.classList.remove('press');
+    if (lock === 'x' && Math.abs(dx) > GO){
+      tick(6);
+      /* left takes you on, right takes you back */
+      if (dx < 0) advance(1);
+      else if (S.i > 0) advance(-1);
+      else reset();
+      return;
+    }
+    reset();
+    if (lock !== null || Date.now() - t0 >= 600){ hit = null; return; }
+    if (hit && card.contains(hit)){ const d = hit; hit = null; showDiagram(d); return; }
+    hit = null;
+    flip();
+  }
+  card.addEventListener('pointerup', end);
+  card.addEventListener('pointercancel', () => { if (id !== null){ id = null; reset(); } });
+  card.addEventListener('keydown', e => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault(); e.stopPropagation();
+    if (!S.open) flip();
+  });
+  /* mouse and keyboard activation still arrive as a plain click */
+  card.addEventListener('click', e => {
+    const d = e.target.closest && e.target.closest('[data-diag]');
+    if (d) { e.stopPropagation(); showDiagram(d); }
+  });
+}
+
+function showDiagram(btn){
+  const c = current();
+  if (!c) return;
+  const pane = document.createElement('div');
+  pane.className = 'vp-pane'; pane.id = 's-vp';
+  pane.style.marginTop = '6px';
+  btn.replaceWith(pane);
+  stopDemo();
+  S.demo = mountDemo(pane, c.demo);
+}
+
+/* ---- the end of a session ---- */
+function renderDone(){
+  const ses = S.session || { studied:0, right:0, again:0, missed:[], total:0 };
+  const pct = ses.studied ? Math.round(ses.right / ses.studied * 100) : 0;
+  const C = 2 * Math.PI * 34;
+  $('#s-live').hidden = true;
+  const box = $('#s-done');
+  box.hidden = false;
+  box.innerHTML =
+    '<div class="card"><div class="sum">' +
+      '<svg class="ring" viewBox="0 0 80 80" aria-hidden="true">' +
+        '<circle cx="40" cy="40" r="34" fill="none" stroke-width="8" stroke="var(--surface-3)"/>' +
+        '<circle cx="40" cy="40" r="34" fill="none" stroke-width="8" stroke="var(--good)" stroke-linecap="round" ' +
+          'transform="rotate(-90 40 40)" stroke-dasharray="' + C.toFixed(1) + '" stroke-dashoffset="' + (C * (1 - pct / 100)).toFixed(1) + '"/>' +
+        '<text x="40" y="45" text-anchor="middle" style="font:700 19px var(--sans); fill:var(--ink)">' + pct + '%</text>' +
+      '</svg>' +
+      '<h2>Session done</h2>' +
+      '<p>' + (ses.missed.length
+        ? 'Nicely done. ' + ses.missed.length + ' code' + (ses.missed.length === 1 ? '' : 's') + ' still need work.'
+        : 'Every card right. Nothing left needing practice.') + '</p>' +
+      (APP.streak.n ? '<span class="streak">' + ico('flame') + APP.streak.n + ' day streak</span>' : '') +
+      '<div class="sumstats">' +
+        '<div><b>' + ses.studied + '</b><span>Studied</span></div>' +
+        '<div><b>' + ses.right + '</b><span>Right</span></div>' +
+        '<div><b>' + ses.missed.length + '</b><span>To review</span></div>' +
       '</div>' +
-      '<p style="font-size:12.5px; color:var(--ink-3); margin-top:4px">' + t.mastered + ' of ' + t.total + ' mastered</p>' +
+    '</div></div>' +
+    '<div class="hsec"><div class="hsec-h"><h2>Study again</h2></div>' +
+      '<div class="again-opts">' +
+        (ses.missed.length ? '<button class="btn wide" type="button" data-again="missed">' + ico('replayico') + 'Review the ' + ses.missed.length + ' missed</button>' : '') +
+        (CARDS.filter(c => isShaky(c.c)).length ? '<button class="btn sec wide" type="button" data-again="shaky">Review difficult</button>' : '') +
+        (CARDS.filter(c => isNew(c.c)).length ? '<button class="btn sec wide" type="button" data-again="fresh">Study new codes</button>' : '') +
+        '<button class="btn sec wide" type="button" data-again="restart">Restart this deck</button>' +
+        '<button class="btn sec wide" type="button" data-again="home">Back to home</button>' +
+      '</div>' +
     '</div>';
-  $('#swipe').hidden = true;
-  $('#s-detail').hidden = true;
-  $('#s-rows').innerHTML = '';
-  $('#deck').querySelectorAll('[data-act]').forEach(b => b.addEventListener('click', () => {
-    if (b.dataset.act === 'full'){ S.only = null; }
-    buildQueue(true); renderCard();
+  const missed = ses.missed.slice();
+  box.querySelectorAll('[data-again]').forEach(b => b.addEventListener('click', () => {
+    const k = b.dataset.again;
+    if (k === 'missed')       startSession(null, missed, 'Missed last session');
+    else if (k === 'home')    go('home');
+    else if (k === 'restart') startSession(S.src, S.only, S.onlyName);
+    else                      startSession(k, null, '');
   }));
+  paintStrip();
 }
 
-/* ---- the detail panel under the card ---- */
+/* jump straight into a deck from anywhere */
+function study(src, only, onlyName){
+  go('study');
+  startSession(src, only, onlyName);
+}
+
+/* ------------------------------ 3 · BROWSE ---------------------------- */
+
+/* two of the 63 are ranges, not three characters */
+const isLongCode = code => code.length > 6;
+
+const B = { q:'', filter:'all', open:null, demo:null };
+
+/* which way you are looking. The schematics caption themselves inside the
+   frame; the toolpath views need to say which plane they are. */
+function viewNote(c){
+  if (c.demo.k !== 'gc') return '';
+  return c.demo.view === 'xy' ? 'Looking down on the table \u2014 X across, Y up the screen.'
+       : c.demo.view === 'xz' ? 'Looking at the machine from the front \u2014 X across, Z up and down.'
+       : 'The same move from above and from the front.';
+}
+
+/* the sample block, read one word at a time */
+function wordsHTML(c){
+  const lines = explainBlock(c.blk);
+  if (!lines.length) return '';
+  return '<p class="words-head">What each word says</p>' + lines.map(l =>
+    '<dl class="words">' +
+      l.parts.map(w => '<dt>' + esc(w.word) + '</dt><dd>' + esc(w.note) + '</dd>').join('') +
+      (l.comment ? '<dd class="cmt">' + esc(l.comment) + '</dd>' : '') +
+    '</dl>').join('');
+}
+
 function detailRowsHTML(c, idPrefix){
   const vis = APP.visuals
     ? '<div class="vp-pane" id="' + idPrefix + '-vp"></div>'
@@ -962,142 +1509,14 @@ function wireShowVis(scope, idPrefix){
     if (idPrefix === 's') S.demo = d; else B.demo = d;
   }));
 }
-function mountDetail(){
-  if (!S.queue.length) return;
-  const c = current();
-  const wrap = $('#s-detail'), rows = $('#s-rows');
-  wrap.hidden = false;
-  rows.innerHTML = detailRowsHTML(c, 's');
-  stopDemo();
-  const pane = $('#s-vp');
-  if (APP.visuals && pane) S.demo = mountDemo(pane, c.demo);
-  wireShowVis(rows, 's');
-}
 
-/* ---- reveal, swipe, grade ---- */
-function reveal(){
-  if (S.open || !S.queue.length) return;
-  S.open = true;
-  const c = current(), card = $('#fcard');
-  if (card){
-    card.innerHTML = cardFaceHTML(c);
-    card.setAttribute('aria-label', c.c + ' — ' + c.desc + '. Swipe or use the arrow keys to grade.');
-  }
-  mountDetail();
-}
-
-function setDrag(card, dx){
-  card.style.transform = 'translateX(' + dx + 'px) rotate(' + (dx / 26) + 'deg)';
-  const k = Math.min(1, Math.abs(dx) / 90);
-  const yes = card.querySelector('.verdict.yes'), no = card.querySelector('.verdict.no');
-  if (yes) yes.style.opacity = dx > 0 ? k : 0;
-  if (no)  no.style.opacity  = dx < 0 ? k : 0;
-}
-function clearDrag(card){
-  card.classList.remove('dragging');
-  card.classList.add('settle');
-  card.style.transform = '';
-  const v = card.querySelectorAll('.verdict');
-  v.forEach(x => { x.style.opacity = 0; });
-  setTimeout(() => card.classList.remove('settle'), 300);
-}
-
-function wireCard(card){
-  let id = null, x0 = 0, y0 = 0, dx = 0, lock = null, moved = false, t0 = 0;
-  const THRESH = 88;
-
-  card.addEventListener('pointerdown', e => {
-    if (S.busy || (e.button !== undefined && e.button !== 0)) return;
-    id = e.pointerId; x0 = e.clientX; y0 = e.clientY; dx = 0; lock = null; moved = false; t0 = Date.now();
-    card.classList.add('dragging'); card.classList.remove('settle');
-    try { card.setPointerCapture(id); } catch (err){}
-  });
-  card.addEventListener('pointermove', e => {
-    if (id === null || e.pointerId !== id) return;
-    dx = e.clientX - x0;
-    const dy = e.clientY - y0;
-    if (lock === null && (Math.abs(dx) > 7 || Math.abs(dy) > 7)){
-      lock = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
-      moved = true;                       /* either axis counts as a drag */
-    }
-    if (lock !== 'x') return;
-    if (e.cancelable) e.preventDefault();
-    setDrag(card, dx);
-  });
-  function end(e){
-    if (id === null || (e && e.pointerId !== id)) return;
-    const held = Date.now() - t0;
-    try { card.releasePointerCapture(id); } catch (err){}
-    id = null;
-    if (lock === 'x' && Math.abs(dx) > THRESH){ fly(card, dx > 0 ? 1 : -1); return; }
-    clearDrag(card);
-    if (!moved && held < 600) reveal();
-  }
-  card.addEventListener('pointerup', end);
-  card.addEventListener('pointercancel', e => { if (id !== null){ id = null; clearDrag(card); } });
-  card.addEventListener('keydown', e => {
-    if (e.key !== 'Enter' && e.key !== ' ') return;
-    e.preventDefault();
-    e.stopPropagation();                  /* or the document handler reveals the next card */
-    if (!S.open) reveal();
-  });
-}
-
-function fly(card, dir){
-  if (S.busy) return;
-  if (!S.open && APP.peek){ reveal(); return; }
-  S.busy = true;
-  card.classList.remove('dragging');
-  card.classList.add('gone');
-  card.style.transform = 'translateX(' + (dir * 150) + '%) rotate(' + (dir * 18) + 'deg)';
-  setTimeout(() => { S.busy = false; grade(dir > 0 ? 'good' : 'again'); }, REDUCED ? 0 : 260);
-}
-
-function grade(g){
-  if (!S.queue.length) return;
-  const c = current(), b = boxOf(c.c);
-  if (!S.open && APP.peek){ reveal(); return; }
-  const nb = g === 'good' ? Math.min(5, b + 1) : 0;
-  const justMastered = nb >= 5 && b < 5;
-  PROG.boxes[c.c] = nb;
-  PROG.seen = (PROG.seen || 0) + 1;
-  APP.touched[c.c] = 1;
-  if (g === 'good'){ S.streak++; PROG.best = Math.max(PROG.best || 0, S.streak); } else S.streak = 0;
-  saveProg(); saveApp();
-
-  S.queue.shift();
-  if (g === 'again') S.queue.splice(Math.min(3, S.queue.length), 0, c.c);
-  else if (nb < 5) S.queue.push(c.c);
-
-  S.open = false;
-  renderCard();
-  if (justMastered) toast(c.c + ' mastered — ' + tally(deckCards()).mastered + ' of ' + deckCards().length);
-}
-
-function setDeck(d){
-  S.only = null; S.deck = d; APP.deck = d; saveApp();
-  $$('[data-deck]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.deck === d)));
-  buildQueue(false); renderCard();
-}
-
-function studyThese(codes, label){
-  S.only = codes.slice();
-  S.queue = codes.slice();
-  S.open = false;
-  go('study');
-  renderCard();
-  if (label) toast(label);
-}
-
-/* ------------------------------ 3 · BROWSE ---------------------------- */
-
-const B = { q:'', filter:'all', open:null, demo:null };
 
 function browseList(){
   const q = B.q.trim().toLowerCase();
   return CARDS.filter(c => {
     if (B.filter === 'G' || B.filter === 'M'){ if (c.f !== B.filter) return false; }
-    else if (B.filter === 'todo'){ if (isMaster(c.c)) return false; }
+    else if (B.filter === 'todo'){ if (isLearned(c.c)) return false; }
+    else if (B.filter === 'star'){ if (!isStar(c.c)) return false; }
     if (!q) return true;
     return (c.c + ' ' + c.desc + ' ' + c.plain + ' ' + c.cat + ' ' + c.blk + ' ' + c.tip).toLowerCase().indexOf(q) >= 0;
   });
@@ -1124,7 +1543,7 @@ function paintBrowse(){
     '<div class="card list" style="margin-top:6px">' + items.map(c => {
       const isOpen = B.open === c.c;
       return '<button class="item" type="button" data-code="' + esc(c.c) + '" aria-expanded="' + isOpen + '">' +
-          '<span class="pip" data-b="' + boxOf(c.c) + '" title="' + (isMaster(c.c) ? 'Mastered' : isTouched(c.c) ? 'Learning' : 'Not started') + '"></span>' +
+          '<span class="pip" data-b="' + levelOf(c.c) + '" title="' + (isLearned(c.c) ? 'Learned' : isSeen(c.c) ? 'Learning' : 'Not started') + '"></span>' +
           '<span class="code' + (isLongCode(c.c) ? ' long' : '') + '">' + esc(c.c) + '</span>' +
           '<span class="what">' + esc(c.desc) + '</span>' +
           ico('chev', 'class="chev"') +
@@ -1132,9 +1551,8 @@ function paintBrowse(){
         (isOpen ? '<div class="detail"><div class="rows">' + detailRowsHTML(c, 'b') + '</div>' +
           '<div class="detail-acts">' +
             '<button class="btn sec" type="button" data-study="' + esc(c.c) + '">Study this code</button>' +
-            (isMaster(c.c)
-              ? '<button class="btn sec" type="button" data-unmaster="' + esc(c.c) + '">Mark for practice</button>'
-              : '<button class="btn sec" type="button" data-master="' + esc(c.c) + '">Mark as known</button>') +
+            '<button class="btn sec" type="button" data-star="' + esc(c.c) + '">' +
+              ico('star') + (isStar(c.c) ? 'In Needs practice' : 'Practice again') + '</button>' +
           '</div></div>' : '');
     }).join('') + '</div>'
   ).join('');
@@ -1149,14 +1567,10 @@ function paintBrowse(){
     if (again) window.scrollBy(0, again.getBoundingClientRect().top - y);
   }));
   body.querySelectorAll('[data-study]').forEach(b => b.addEventListener('click', () =>
-    studyThese([b.dataset.study], 'Studying ' + b.dataset.study)));
-  body.querySelectorAll('[data-master]').forEach(b => b.addEventListener('click', () => {
-    PROG.boxes[b.dataset.master] = 5; APP.touched[b.dataset.master] = 1; saveProg(); saveApp();
-    paintBrowse(); paintStudyHead(); toast(b.dataset.master + ' marked as known');
-  }));
-  body.querySelectorAll('[data-unmaster]').forEach(b => b.addEventListener('click', () => {
-    PROG.boxes[b.dataset.unmaster] = 0; APP.touched[b.dataset.unmaster] = 1; saveProg(); saveApp();
-    paintBrowse(); paintStudyHead(); toast(b.dataset.unmaster + ' back in the practice pile');
+    study(null, [b.dataset.study], b.dataset.study)));
+  body.querySelectorAll('[data-star]').forEach(b => b.addEventListener('click', () => {
+    toggleStar(b.dataset.star);
+    paintBrowse();
   }));
 
   if (B.open){
@@ -1165,6 +1579,14 @@ function paintBrowse(){
     if (pane && APP.visuals) B.demo = mountDemo(pane, card.demo);
     wireShowVis(body, 'b');
   }
+}
+
+function toggleStar(code){
+  const on = !isStar(code);
+  if (on) APP.star[code] = 1; else delete APP.star[code];
+  saveApp(); tick(on ? 12 : 6);
+  toast(on ? code + ' added to Needs practice' : code + ' removed from Needs practice');
+  return on;
 }
 
 function openInBrowse(code){
@@ -1176,23 +1598,205 @@ function openInBrowse(code){
   if (el) el.scrollIntoView({ block:'center', behavior:REDUCED ? 'auto' : 'smooth' });
 }
 
-/* ------------------------------- 4 · GAME ----------------------------- */
-/* Code Rush: sixty seconds, three lives, four choices, both directions. */
+/* ------------------------------- 4 · GAMES ----------------------------
+   A hub, then two games. Both feed the study record: a miss schedules that
+   code sooner. A hit never promotes a card — a lucky tap is not studying.
+   ----------------------------------------------------------------------- */
 
-const G = { on:false, over:false, paused:false, deck:'all', score:0, streak:0, bestRun:0, lives:3,
-            left:60, t0:0, tick:0, next:0, q:null, locked:false,
-            right:0, wrong:0, missed:[], pool:[] };
+const G = { view:'hub', deck:'all',
+            /* rush */
+            on:false, over:false, paused:false, score:0, streak:0, bestRun:0, lives:3,
+            left:60, t0:0, tick:0, next:0, q:null, locked:false, right:0, wrong:0, missed:[], pool:[],
+            /* match */
+            m:null };
 const RUSH_SECONDS = 60;
 
 function gameDeck(){ return CARDS.filter(c => G.deck === 'all' || c.f === G.deck); }
 
+function paintGame(){
+  const body = $('#g-body');
+  if (G.view === 'rush'){ paintRush(body); return; }
+  if (G.view === 'match'){ paintMatch(body); return; }
+  paintHub(body);
+}
+
+function paintHub(body){
+  const g = APP.game;
+  body.innerHTML =
+    '<div class="hsec">' +
+      '<div class="hsec-h"><h2>Games</h2></div>' +
+      '<button class="gtile" type="button" data-game="match">' +
+        '<span class="ic" style="background:var(--good-soft); color:var(--good)">' + ico('grid2') + '</span>' +
+        '<span class="txt"><strong>Match Up</strong><span>Pair each code with what it does</span></span>' +
+        (g.matchBest ? '<span class="best">' + g.matchBest + 's</span>' : '') +
+      '</button>' +
+      '<button class="gtile" type="button" data-game="rush">' +
+        '<span class="ic" style="background:var(--accent-soft); color:var(--accent)">' + ico('bolt') + '</span>' +
+        '<span class="txt"><strong>Code Rush</strong><span>Sixty seconds, three lives, four choices</span></span>' +
+        (g.best ? '<span class="best">' + g.best + '</span>' : '') +
+      '</button>' +
+    '</div>' +
+    '<div class="chips" role="group" aria-label="Which codes">' +
+      ['all','G','M'].map(d => '<button class="chip" type="button" data-gdeck="' + d + '" aria-pressed="' +
+        (G.deck === d) + '">' + (d === 'all' ? 'All codes' : d + '-Code') + '</button>').join('') +
+    '</div>' +
+    '<p style="font-size:12.5px; color:var(--ink-3); line-height:1.5; padding:0 2px">' +
+      'Anything you miss in a game is scheduled to come round again in Study.</p>';
+  body.querySelectorAll('[data-gdeck]').forEach(b => b.addEventListener('click', () => {
+    G.deck = b.dataset.gdeck; G.pool = []; paintGame();
+  }));
+  body.querySelectorAll('[data-game]').forEach(b => b.addEventListener('click', () => {
+    if (b.dataset.game === 'match') startMatch(); else startRush();
+  }));
+}
+
+function backToHub(){
+  stopClocks();
+  if (G.m && G.m.timer){ clearInterval(G.m.timer); G.m.timer = 0; }
+  G.view = 'hub'; G.on = false; G.over = false; G.m = null;
+  paintGame();
+}
+
+/* =================== MATCH UP ===================
+   Six codes, six definitions, shuffled. Tap one of each. A right pair
+   settles green and fades out; a wrong one shakes and lets go, without
+   showing you which was right. */
+const MATCH_PAIRS = 6;
+
+function startMatch(){
+  const deck = gameDeck();
+  const pick = shuffled(deck).slice(0, MATCH_PAIRS);
+  G.m = {
+    pairs: pick.map(c => c.c),
+    left: shuffled(pick.map(c => c.c)),
+    right: shuffled(pick.map(c => c.c)),
+    selL: null, selR: null, done: [], tries: 0, hits: 0,
+    t0: Date.now(), elapsed: 0, timer: 0, finished: false
+  };
+  G.view = 'match';
+  paintGame();
+  G.m.timer = setInterval(() => {
+    if (!G.m || G.m.finished) return;
+    G.m.elapsed = Math.floor((Date.now() - G.m.t0) / 1000);
+    const el = $('#m-time');
+    if (el) el.textContent = G.m.elapsed + 's';
+  }, 250);
+}
+
+function paintMatch(body){
+  const m = G.m;
+  if (!m){ backToHub(); return; }
+  if (m.finished){ paintMatchDone(body); return; }
+  const cell = (code, side) => {
+    const done = m.done.indexOf(code) >= 0;
+    const sel  = (side === 'l' ? m.selL : m.selR) === code;
+    const c = BY_CODE[code];
+    return '<button class="mcell' + (side === 'l' ? ' code' : '') + (done ? ' done' : '') + '" type="button" ' +
+      'data-side="' + side + '" data-code="' + esc(code) + '" aria-pressed="' + sel + '"' +
+      (done ? ' tabindex="-1" aria-hidden="true"' : '') + '>' +
+      (side === 'l' ? esc(code) : esc(c.desc)) + '</button>';
+  };
+  body.innerHTML =
+    '<div class="hud">' +
+      '<div class="cell"><span>Matched</span><b>' + m.hits + ' / ' + MATCH_PAIRS + '</b></div>' +
+      '<div class="cell"><span>Tries</span><b>' + m.tries + '</b></div>' +
+      '<div class="cell"><span>Time</span><b id="m-time">' + m.elapsed + 's</b></div>' +
+    '</div>' +
+    '<div class="mgrid" style="margin-top:var(--sp-3)">' +
+      '<div class="hsec" style="gap:var(--sp-2)">' + m.left.map(c => cell(c, 'l')).join('') + '</div>' +
+      '<div class="hsec" style="gap:var(--sp-2)">' + m.right.map(c => cell(c, 'r')).join('') + '</div>' +
+    '</div>' +
+    '<button class="btn sec wide" type="button" id="m-quit" style="margin-top:var(--sp-4)">Back to games</button>';
+  body.querySelectorAll('[data-code]').forEach(b => b.addEventListener('click', () => matchTap(b)));
+  $('#m-quit').addEventListener('click', backToHub);
+}
+
+function matchTap(btn){
+  const m = G.m;
+  if (!m || m.finished) return;
+  const side = btn.dataset.side, code = btn.dataset.code;
+  if (m.done.indexOf(code) >= 0) return;
+  if (side === 'l') m.selL = m.selL === code ? null : code;
+  else              m.selR = m.selR === code ? null : code;
+  tick(6);
+
+  if (m.selL && m.selR){
+    m.tries++;
+    const hit = m.selL === m.selR;
+    const lEl = $('#g-body [data-side="l"][data-code="' + CSS.escape(m.selL) + '"]');
+    const rEl = $('#g-body [data-side="r"][data-code="' + CSS.escape(m.selR) + '"]');
+    if (hit){
+      m.hits++;
+      m.done.push(m.selL);
+      gameResult(m.selL, true);
+      [lEl, rEl].forEach(e => e && e.classList.add('hit'));
+      tick(12);
+      const pair = m.selL;
+      m.selL = m.selR = null;
+      setTimeout(() => {
+        const a = $('#g-body [data-side="l"][data-code="' + CSS.escape(pair) + '"]');
+        const b = $('#g-body [data-side="r"][data-code="' + CSS.escape(pair) + '"]');
+        [a, b].forEach(e => e && e.classList.add('done'));
+        if (m.hits >= MATCH_PAIRS) finishMatch();
+      }, 420);
+      return;
+    }
+    /* a miss says only that this pair is wrong */
+    gameResult(m.selL, false);
+    [lEl, rEl].forEach(e => e && e.classList.add('miss'));
+    tick([8, 40, 8]);
+    const a = m.selL, b = m.selR;
+    m.selL = m.selR = null;
+    setTimeout(() => {
+      const la = $('#g-body [data-side="l"][data-code="' + CSS.escape(a) + '"]');
+      const rb = $('#g-body [data-side="r"][data-code="' + CSS.escape(b) + '"]');
+      [la, rb].forEach(e => e && e.classList.remove('miss'));
+      paintMatch($('#g-body'));
+    }, 480);
+    return;
+  }
+  paintMatch($('#g-body'));
+}
+
+function finishMatch(){
+  const m = G.m;
+  m.finished = true;
+  m.elapsed = Math.floor((Date.now() - m.t0) / 1000);
+  clearInterval(m.timer); m.timer = 0;
+  const best = APP.game.matchBest || 0;
+  if (!best || m.elapsed < best) APP.game.matchBest = m.elapsed;
+  APP.game.plays = (APP.game.plays || 0) + 1;
+  bumpStreak(); saveApp();
+  paintGame();
+}
+
+function paintMatchDone(body){
+  const m = G.m, best = APP.game.matchBest;
+  const perfect = m.tries === MATCH_PAIRS;
+  body.innerHTML =
+    '<div class="card"><div class="sum">' +
+      '<div class="orb" style="width:66px;height:66px;border-radius:20px;display:grid;place-items:center;background:var(--good-soft);color:var(--good)">' + ico('check') + '</div>' +
+      '<h2>' + m.elapsed + ' seconds</h2>' +
+      '<p>' + (perfect ? 'Six from six, no wrong pairs.' : m.tries + ' tries for six pairs.') +
+        (best === m.elapsed ? ' A new best time.' : ' Best ' + best + 's.') + '</p>' +
+      (APP.streak.n ? '<span class="streak">' + ico('flame') + APP.streak.n + ' day streak</span>' : '') +
+    '</div></div>' +
+    '<div class="again-opts">' +
+      '<button class="btn wide" type="button" id="m-again">' + ico('replayico') + 'Play again</button>' +
+      '<button class="btn sec wide" type="button" id="m-back">Back to games</button>' +
+    '</div>';
+  $('#m-again').addEventListener('click', startMatch);
+  $('#m-back').addEventListener('click', backToHub);
+}
+
+/* =================== CODE RUSH =================== */
 function newQuestion(){
   const deck = gameDeck();
   if (!G.pool.length) G.pool = shuffled(deck.map(c => c.c));
   const c = BY_CODE[G.pool.shift()];
   const dir = Math.random() < .5 ? 'toDesc' : 'toCode';
-  /* distractors stay inside the same family: a G question answered with
-     three M codes is one glance to eliminate, which is not a question */
+  /* distractors stay inside the same family, and prefer the same group, so
+     the wrong answers are ones you could actually believe */
   const pool = CARDS.filter(x => x.c !== c.c && x.f === c.f);
   const same = shuffled(pool.filter(x => x.cat === c.cat));
   const rest = shuffled(pool.filter(x => x.cat !== c.cat));
@@ -1202,40 +1806,42 @@ function newQuestion(){
   G.locked = false;
 }
 
-function paintGame(){
-  const body = $('#g-body');
-  if (!G.on && !G.over){ paintGameStart(body); return; }
-  if (G.over){ paintGameOver(body); return; }
-  paintGameRound(body);
+function startRush(){
+  stopClocks();
+  G.view = 'rush';
+  G.on = true; G.over = false; G.score = 0; G.streak = 0; G.bestRun = 0; G.lives = 3;
+  G.left = RUSH_SECONDS; G.right = 0; G.wrong = 0; G.missed = []; G.pool = [];
+  newQuestion();
+  paintGame();
+  startTick();
 }
 
-function paintGameStart(body){
-  const g = APP.game;
-  body.innerHTML =
-    '<div class="card"><div class="hero">' +
-      '<div class="orb">' + ico('bolt') + '</div>' +
-      '<h2>Code Rush</h2>' +
-      '<p>Sixty seconds, three lives. Name the code or name what it does &mdash; a streak multiplies every point.</p>' +
-    '</div></div>' +
-    '<div class="tiles">' +
-      '<div class="tile"><span>High score</span><b>' + (g.best || 0) + '</b></div>' +
-      '<div class="tile"><span>Best streak</span><b>' + (g.bestStreak || 0) + '</b></div>' +
-      '<div class="tile"><span>Rounds</span><b>' + (g.plays || 0) + '</b></div>' +
-    '</div>' +
-    '<div class="chips" role="group" aria-label="Game deck">' +
-      ['all', 'G', 'M'].map(d =>
-        '<button class="chip" type="button" data-gdeck="' + d + '" aria-pressed="' + (G.deck === d) + '">' +
-        (d === 'all' ? 'All codes' : d + '-Code') + '</button>').join('') +
-    '</div>' +
-    '<button class="btn wide" type="button" id="g-start">' + ico('bolt') + 'Start the round</button>';
-  body.querySelectorAll('[data-gdeck]').forEach(b => b.addEventListener('click', () => {
-    G.deck = b.dataset.gdeck; G.pool = []; paintGame();
-  }));
-  $('#g-start').addEventListener('click', startGame);
+function stopClocks(){
+  clearInterval(G.tick); G.tick = 0;
+  clearTimeout(G.next);  G.next = 0;
+  G.paused = false;
 }
+function startTick(){
+  clearInterval(G.tick);
+  G.paused = false;
+  G.t0 = Date.now() - (RUSH_SECONDS - G.left) * 1000;
+  G.tick = setInterval(() => {
+    G.left = Math.max(0, RUSH_SECONDS - (Date.now() - G.t0) / 1000);
+    const bar = $('#g-timer');
+    if (bar){
+      bar.style.width = (G.left / RUSH_SECONDS * 100) + '%';
+      bar.classList.toggle('low', G.left <= 10);
+    }
+    if (G.left <= 0) endRush();
+  }, 120);
+}
+function pauseGame(){ if (G.on && G.tick){ clearInterval(G.tick); G.tick = 0; G.paused = true; } }
+function resumeGame(){ if (G.on && G.paused) startTick(); }
 
-function paintGameRound(body){
+function paintRush(body){
+  if (G.over){ paintRushDone(body); return; }
   const q = G.q;
+  if (!q){ backToHub(); return; }
   const pct = Math.max(0, G.left / RUSH_SECONDS * 100);
   const lives = Array.from({ length:3 }, (_, i) => '<i class="' + (i < G.lives ? '' : 'spent') + '"></i>').join('');
   const ask = q.dir === 'toDesc' ? 'What does this command?' : 'Which code does this?';
@@ -1248,107 +1854,37 @@ function paintGameRound(body){
       '<div class="cell' + (G.streak > 1 ? ' hot' : '') + '"><span>Streak</span><b>' + G.streak + (G.streak > 1 ? '×' : '') + '</b></div>' +
       '<div class="cell"><span>Lives</span><div class="lives" style="margin-top:4px">' + lives + '</div></div>' +
     '</div>' +
-    '<div class="timer"><i id="g-timer" class="' + (G.left <= 10 ? 'low' : '') + '" style="width:' + pct + '%"></i></div>' +
-    '<div class="qcard"><p class="ask">' + ask + '</p>' + prompt + '</div>' +
-    '<div class="opts">' + q.opts.map((x, i) =>
+    '<div class="timer" style="margin-top:var(--sp-3)"><i id="g-timer" class="' + (G.left <= 10 ? 'low' : '') + '" style="width:' + pct + '%"></i></div>' +
+    '<div class="qcard" style="margin-top:var(--sp-3)"><p class="ask">' + ask + '</p>' + prompt + '</div>' +
+    '<div class="opts" style="margin-top:var(--sp-3)">' + q.opts.map((x, i) =>
       '<button class="opt' + (q.dir === 'toCode' ? ' mono-opt' : '') + '" type="button" data-pick="' + esc(x.c) + '">' +
       '<b>' + 'ABCD'[i] + '</b><span>' + esc(q.dir === 'toDesc' ? x.desc : x.c) + '</span></button>').join('') +
     '</div>' +
-    '<button class="btn sec wide" type="button" id="g-quit">End the round</button>';
+    '<button class="btn sec wide" type="button" id="g-quit" style="margin-top:var(--sp-4)">End the round</button>';
   body.querySelectorAll('[data-pick]').forEach(b => b.addEventListener('click', () => answer(b.dataset.pick)));
-  $('#g-quit').addEventListener('click', () => endGame());
-}
-
-function paintGameOver(body){
-  const g = APP.game;
-  const total = G.right + G.wrong;
-  const acc = total ? Math.round(G.right / total * 100) : 0;
-  const isBest = G.score >= (g.best || 0) && G.score > 0;
-  body.innerHTML =
-    '<div class="card"><div class="hero">' +
-      '<div class="orb">' + ico(isBest ? 'bolt' : 'target') + '</div>' +
-      '<h2>' + G.score + ' points</h2>' +
-      '<p>' + (isBest ? 'A new high score. ' : 'High score ' + (g.best || 0) + '. ') +
-        G.right + ' right, ' + G.wrong + ' wrong &mdash; ' + acc + '% accurate.</p>' +
-    '</div></div>' +
-    '<div class="tiles">' +
-      '<div class="tile"><span>Best streak</span><b>' + G.bestRun + '</b></div>' +
-      '<div class="tile"><span>Answered</span><b>' + total + '</b></div>' +
-      '<div class="tile"><span>High score</span><b>' + (g.best || 0) + '</b></div>' +
-    '</div>' +
-    (G.missed.length
-      ? '<div class="card"><div class="card-head"><h2>Missed</h2><span class="n">' + G.missed.length + '</span></div>' +
-        '<div class="card-pad" style="display:flex; flex-direction:column; gap:12px">' +
-          '<div class="missed">' + G.missed.map(c => '<span>' + esc(c) + '</span>').join('') + '</div>' +
-          '<button class="btn sec wide" type="button" id="g-practice">Practice these ' + G.missed.length + ' in Study</button>' +
-        '</div></div>'
-      : '<div class="card"><p class="empty">Not one missed. Go again with a bigger deck.</p></div>') +
-    '<button class="btn wide" type="button" id="g-again">' + ico('replayico') + 'Play again</button>' +
-    '<button class="btn sec wide" type="button" id="g-menu">Back to the start</button>';
-  const p = $('#g-practice');
-  if (p) p.addEventListener('click', () => studyThese(G.missed, 'Studying the ' + G.missed.length + ' you missed'));
-  $('#g-again').addEventListener('click', startGame);
-  $('#g-menu').addEventListener('click', () => { G.over = false; paintGame(); });
-}
-
-function startGame(){
-  stopClocks();
-  G.on = true; G.over = false; G.score = 0; G.streak = 0; G.bestRun = 0; G.lives = 3;
-  G.left = RUSH_SECONDS; G.right = 0; G.wrong = 0; G.missed = []; G.pool = [];
-  newQuestion();
-  paintGame();
-  startTick();
-}
-
-/* every exit from a round goes through here, so no interval and no pending
-   question hand-off can outlive the round that started it */
-function stopClocks(){
-  clearInterval(G.tick); G.tick = 0;
-  clearTimeout(G.next);  G.next = 0;
-  G.paused = false;
-}
-
-function startTick(){
-  clearInterval(G.tick);
-  G.paused = false;
-  G.t0 = Date.now() - (RUSH_SECONDS - G.left) * 1000;
-  G.tick = setInterval(() => {
-    G.left = Math.max(0, RUSH_SECONDS - (Date.now() - G.t0) / 1000);
-    const bar = $('#g-timer');
-    if (bar){
-      bar.style.width = (G.left / RUSH_SECONDS * 100) + '%';
-      bar.classList.toggle('low', G.left <= 10);
-    }
-    if (G.left <= 0) endGame();
-  }, 120);
-}
-
-function pauseGame(){
-  if (G.on && G.tick){ clearInterval(G.tick); G.tick = 0; G.paused = true; }
-}
-function abandonGame(){ stopClocks(); G.on = false; G.over = false; }
-function resumeGame(){
-  if (G.on && G.paused) startTick();
+  $('#g-quit').addEventListener('click', () => endRush());
 }
 
 function answer(code){
   if (G.locked) return;
   G.locked = true;
   const q = G.q, right = code === q.card.c;
-  const btns = $$('#g-body [data-pick]');
-  btns.forEach(b => {
+  $$('#g-body [data-pick]').forEach(b => {
     b.disabled = true;
     if (b.dataset.pick === q.card.c) b.classList.add('right');
     else if (b.dataset.pick === code) b.classList.add('wrong');
     else b.classList.add('dim');
   });
+  gameResult(q.card.c, right);
   if (right){
     G.right++; G.streak++;
     G.bestRun = Math.max(G.bestRun, G.streak);
     G.score += 10 + Math.min(G.streak - 1, 5) * 4;
+    tick(10);
   } else {
     G.wrong++; G.streak = 0; G.lives--;
     if (G.missed.indexOf(q.card.c) < 0) G.missed.push(q.card.c);
+    tick([8, 40, 8]);
   }
   const scoreEl = $('#g-score');
   if (scoreEl) scoreEl.textContent = G.score;
@@ -1356,12 +1892,12 @@ function answer(code){
   G.next = setTimeout(() => {
     G.next = 0;
     if (!G.on) return;
-    if (G.lives <= 0 || G.left <= 0){ endGame(); return; }
+    if (G.lives <= 0 || G.left <= 0){ endRush(); return; }
     newQuestion(); paintGame();
   }, right ? 420 : 950);
 }
 
-function endGame(){
+function endRush(){
   if (!G.on) return;
   stopClocks();
   G.on = false; G.over = true;
@@ -1369,11 +1905,112 @@ function endGame(){
   g.plays = (g.plays || 0) + 1;
   g.best = Math.max(g.best || 0, G.score);
   g.bestStreak = Math.max(g.bestStreak || 0, G.bestRun || 0);
-  saveApp();
+  bumpStreak(); saveApp();
   paintGame();
 }
 
-/* ----------------------------- 5 · PROGRESS --------------------------- */
+function paintRushDone(body){
+  const g = APP.game;
+  const total = G.right + G.wrong;
+  const acc = total ? Math.round(G.right / total * 100) : 0;
+  const isBest = G.score >= (g.best || 0) && G.score > 0;
+  body.innerHTML =
+    '<div class="card"><div class="sum">' +
+      '<div class="orb" style="width:66px;height:66px;border-radius:20px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent)">' + ico(isBest ? 'bolt' : 'target') + '</div>' +
+      '<h2>' + G.score + ' points</h2>' +
+      '<p>' + (isBest ? 'A new high score. ' : 'High score ' + (g.best || 0) + '. ') +
+        G.right + ' right, ' + G.wrong + ' wrong — ' + acc + '% accurate.</p>' +
+      (APP.streak.n ? '<span class="streak">' + ico('flame') + APP.streak.n + ' day streak</span>' : '') +
+      '<div class="sumstats">' +
+        '<div><b>' + G.bestRun + '</b><span>Best run</span></div>' +
+        '<div><b>' + total + '</b><span>Answered</span></div>' +
+        '<div><b>' + G.missed.length + '</b><span>Missed</span></div>' +
+      '</div>' +
+    '</div></div>' +
+    '<div class="again-opts">' +
+      (G.missed.length ? '<button class="btn wide" type="button" id="g-practice">Study the ' + G.missed.length + ' you missed</button>' : '') +
+      '<button class="btn' + (G.missed.length ? ' sec' : '') + ' wide" type="button" id="g-again">' + ico('replayico') + 'Play again</button>' +
+      '<button class="btn sec wide" type="button" id="g-back">Back to games</button>' +
+    '</div>';
+  const p = $('#g-practice');
+  if (p) p.addEventListener('click', () => study(null, G.missed.slice(), 'Missed in Code Rush'));
+  $('#g-again').addEventListener('click', startRush);
+  $('#g-back').addEventListener('click', backToHub);
+}
+
+/* ------------------------------ 5 · HOME ------------------------------ */
+
+function deckCounts(){
+  return {
+    due:   CARDS.filter(c => isDue(c.c)).length,
+    fresh: CARDS.filter(c => isNew(c.c)).length,
+    star:  CARDS.filter(c => isStar(c.c)).length,
+    shaky: CARDS.filter(c => isShaky(c.c)).length
+  };
+}
+
+function paintHome(){
+  const n = deckCounts();
+  /* what "continue" means depends on where you actually are */
+  const next = n.due ? { src:'due', label:'Due today', sub:n.due + ' card' + (n.due === 1 ? '' : 's') + ' ready' }
+             : n.fresh ? { src:'fresh', label:'Start something new', sub:n.fresh + ' code' + (n.fresh === 1 ? '' : 's') + ' not seen yet' }
+             : n.star ? { src:'star', label:'Needs practice', sub:n.star + ' starred' }
+             : { src:'all', label:'Run the whole deck', sub:CARDS.length + ' codes' };
+  $('#h-eyebrow').textContent = n.due ? 'Continue studying' : 'Start studying';
+  $('#h-title').textContent = next.label;
+  $('#h-sub').textContent = next.sub;
+  $('#h-go').innerHTML = ico('right');
+  $('#h-continue').onclick = () => study(next.src, null, '');
+
+  const decks = [
+    ['all',   'All codes',      CARDS.length + ' codes',                   'a', 'grid2'],
+    ['star',  'Needs practice', n.star ? n.star + ' starred' : 'Star a card to fill this', 'w', 'star'],
+    ['G',     'G codes',        CARDS.filter(c => c.f === 'G').length + ' codes', 'a', 'study'],
+    ['M',     'M codes',        CARDS.filter(c => c.f === 'M').length + ' codes', 'a', 'study']
+  ];
+  $('#h-decks').innerHTML = decks.map(([src, name, sub, tone, icon]) =>
+    '<button type="button" data-src="' + src + '">' +
+      '<span class="ic ' + tone + '">' + ico(icon) + '</span>' +
+      '<strong>' + esc(name) + '</strong><span>' + esc(sub) + '</span>' +
+    '</button>').join('');
+  $('#h-decks').querySelectorAll('[data-src]').forEach(b =>
+    b.addEventListener('click', () => study(b.dataset.src, null, '')));
+
+  const g = APP.game;
+  $('#h-games').innerHTML =
+    '<button class="gtile" type="button" data-game="match">' +
+      '<span class="ic" style="background:var(--good-soft); color:var(--good)">' + ico('grid2') + '</span>' +
+      '<span class="txt"><strong>Match Up</strong><span>Pair codes with what they do</span></span>' +
+      (g.matchBest ? '<span class="best">' + g.matchBest + 's</span>' : '') +
+    '</button>' +
+    '<button class="gtile" type="button" data-game="rush">' +
+      '<span class="ic" style="background:var(--accent-soft); color:var(--accent)">' + ico('bolt') + '</span>' +
+      '<span class="txt"><strong>Code Rush</strong><span>Sixty seconds against the clock</span></span>' +
+      (g.best ? '<span class="best">' + g.best + '</span>' : '') +
+    '</button>';
+  $('#h-games').querySelectorAll('[data-game]').forEach(b => b.addEventListener('click', () => {
+    go('games');
+    if (b.dataset.game === 'match') startMatch(); else startRush();
+  }));
+
+  const t = tally(CARDS);
+  $('#h-progress').innerHTML =
+    '<div style="display:flex; flex-direction:column; gap:9px">' +
+      '<div style="display:flex; align-items:baseline; gap:8px">' +
+        '<b style="font-family:var(--mono); font-size:19px; font-weight:600">' + t.mastered + ' / ' + t.total + '</b>' +
+        '<span style="font-size:13px; color:var(--ink-3)">learned</span>' +
+        (APP.streak.n ? '<span class="streak" style="margin-left:auto; padding:4px 10px; font-size:12px">' + ico('flame') + APP.streak.n + '</span>' : '') +
+      '</div>' +
+      '<div class="bar split"><i class="m" style="width:' + (t.mastered / t.total * 100) + '%"></i>' +
+      '<i class="l" style="width:' + (t.learning / t.total * 100) + '%"></i></div>' +
+      '<div class="legend-dots"><span><b>' + t.mastered + '</b> Learned</span>' +
+      '<span><b>' + t.learning + '</b> Learning</span><span><b>' + t.fresh + '</b> New</span></div>' +
+    '</div>';
+
+  $$('[data-goto]').forEach(b => { b.onclick = () => go(b.dataset.goto); });
+}
+
+/* ----------------------------- 6 · PROGRESS --------------------------- */
 
 function paintProgress(){
   const t = tally(CARDS);
@@ -1387,9 +2024,9 @@ function paintProgress(){
   $('#p-new').textContent = t.fresh;
   $('#p-total').textContent = t.total;
   $('#p-seen').textContent = PROG.seen || 0;
-  $('#p-best').textContent = PROG.best || 0;
+  $('#p-streak').textContent = APP.streak.n || 0;
+  $('#p-star').textContent = CARDS.filter(c => isStar(c.c)).length;
   $('#p-ghigh').textContent = APP.game.best || 0;
-  $('#p-gplays').textContent = APP.game.plays || 0;
 
   $('#p-grp-n').textContent = CATS.length + ' groups';
   $('#p-groups').innerHTML = CATS.map(cat => {
@@ -1403,26 +2040,27 @@ function paintProgress(){
     '</div>';
   }).join('');
 
-  const weak = CARDS.filter(c => isTouched(c.c) && boxOf(c.c) <= 2)
-                    .sort((a, b) => boxOf(a.c) - boxOf(b.c)).slice(0, 8);
+  const weak = CARDS.filter(c => isShaky(c.c))
+                    .sort((a, b) => levelOf(a.c) - levelOf(b.c) || rec(b.c).lapses - rec(a.c).lapses)
+                    .slice(0, 8);
   $('#p-weak-card').hidden = !weak.length;
   if (weak.length){
     $('#p-weak').innerHTML = weak.map(c =>
       '<button class="item" type="button" data-weak="' + esc(c.c) + '">' +
-        '<span class="pip" data-b="' + boxOf(c.c) + '"></span>' +
-        '<span class="code' + (isLongCode(c.c) ? ' long' : '') + '">' + esc(c.c) + '</span>' +
+        '<span class="pip" data-b="' + levelOf(c.c) + '"></span>' +
+        '<span class="code' + (c.c.length > 6 ? ' long' : '') + '">' + esc(c.c) + '</span>' +
         '<span class="what">' + esc(c.desc) + '</span>' + ico('chev', 'class="chev"') +
       '</button>').join('') +
       '<div class="detail-acts" style="padding:12px 16px">' +
-        '<button class="btn sec wide" type="button" id="p-practice">Practice these ' + weak.length + '</button></div>';
+        '<button class="btn sec wide" type="button" id="p-practice">Study these ' + weak.length + '</button></div>';
     $('#p-weak').querySelectorAll('[data-weak]').forEach(b =>
       b.addEventListener('click', () => openInBrowse(b.dataset.weak)));
     $('#p-practice').addEventListener('click', () =>
-      studyThese(weak.map(c => c.c), 'Studying the ' + weak.length + ' that need work'));
+      study(null, weak.map(c => c.c), 'Difficult codes'));
   }
 
   $('#p-map').innerHTML = CARDS.map(c =>
-    '<button type="button" data-b="' + boxOf(c.c) + '" data-map="' + esc(c.c) + '" ' +
+    '<button type="button" data-b="' + levelOf(c.c) + '" data-map="' + esc(c.c) + '" ' +
     'title="' + esc(c.c) + ' — ' + esc(c.desc) + '">' + esc(c.c) + '</button>').join('');
   $('#p-map').querySelectorAll('[data-map]').forEach(b =>
     b.addEventListener('click', () => openInBrowse(b.dataset.map)));
@@ -1435,39 +2073,40 @@ function paintSettings(){
   $$('#set-deck button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.deck === APP.deck)));
   $('#set-visuals').checked = !!APP.visuals;
   $('#set-tips').checked = !!APP.tips;
-  $('#set-peek').checked = !!APP.peek;
 }
 
 function wireSettings(){
   $$('#set-theme button').forEach(b => b.addEventListener('click', () => {
     APP.theme = b.dataset.theme; saveApp(); applyTheme(); paintSettings();
   }));
-  $$('#set-deck button').forEach(b => b.addEventListener('click', () => { setDeck(b.dataset.deck); paintSettings(); }));
+  $$('#set-deck button').forEach(b => b.addEventListener('click', () => {
+    APP.deck = b.dataset.deck; saveApp(); paintSettings();
+    /* the setting means something now, not after the next reload */
+    startSession(b.dataset.deck, null, '');
+  }));
   $('#set-visuals').addEventListener('change', e => {
     APP.visuals = e.target.checked; saveApp();
-    if (S.open) mountDetail();
+    if (S.tab === 'study' && S.open) renderCard();
     if (S.tab === 'browse') paintBrowse();
   });
   $('#set-tips').addEventListener('change', e => {
     APP.tips = e.target.checked; saveApp();
-    if (S.open) mountDetail();
     if (S.tab === 'browse') paintBrowse();
   });
-  $('#set-peek').addEventListener('change', e => { APP.peek = e.target.checked; saveApp(); });
   $('#set-reset-game').addEventListener('click', () => {
-    if (!window.confirm('Clear the Code Rush high score and round count?')) return;
-    APP.game = { best:0, plays:0, bestStreak:0 }; saveApp();
-    abandonGame();
-    if (S.tab === 'game') paintGame();
+    if (!window.confirm('Clear the game scores and best times?')) return;
+    APP.game = { best:0, plays:0, bestStreak:0, matchBest:0 }; saveApp();
+    backToHub();
     toast('Game scores cleared');
-    paintProgress();
   });
   $('#set-reset').addEventListener('click', () => {
-    if (!window.confirm('Reset every box, streak and answered count? This also resets the full Rapid Traverse trainer on this device.')) return;
-    PROG.boxes = {}; PROG.seen = 0; PROG.best = 0; APP.touched = {};
+    if (!window.confirm('Reset every card, the streak and the starred list? This also resets the full Rapid Traverse trainer on this device.')) return;
+    PROG.boxes = {}; PROG.seen = 0; PROG.best = 0;
+    APP.srs = {}; APP.star = {}; APP.flips = 0; APP.streak = { n:0, last:'' };
     saveProg(); saveApp();
-    S.only = null; S.streak = 0;
-    buildQueue(false); renderCard(); paintProgress(); paintBrowse();
+    S.only = null;
+    startSession(S.src, null, '');
+    paintProgress(); paintBrowse(); paintHome();
     toast('Progress reset');
   });
 }
@@ -1484,26 +2123,26 @@ $('#btn-theme').addEventListener('click', () => {
   saveApp(); applyTheme(); paintSettings();
 });
 $('#btn-gear').innerHTML = ico('settings');
-$('#btn-gear').addEventListener('click', () => go(S.tab === 'settings' ? 'study' : 'settings'));
-TABS.forEach(t => document.getElementById('tab-' + t.id).addEventListener('click', () => go(t.id)));
+$('#btn-gear').addEventListener('click', () => go(S.tab === 'settings' ? 'home' : 'settings'));
+TABS.forEach(t => document.getElementById('tab-' + t.id).addEventListener('click', () => {
+  if (t.id === 'study' && !S.queue.length) startSession(APP.deck || 'all', null, '');
+  go(t.id);
+}));
 
-$$('.chips [data-deck]').forEach(b => b.addEventListener('click', () => setDeck(b.dataset.deck)));
-$('#s-focus-clear').addEventListener('click', () => { setDeck(S.deck); toast('Back to the full deck'); });
-$('#btn-shuffle').innerHTML = ico('shuffle') + 'Shuffle';
-$('#btn-shuffle').addEventListener('click', () => { buildQueue(true); renderCard(); toast('Deck shuffled'); });
-
-$('#swipe').querySelectorAll('[data-grade]').forEach(b => {
-  b.querySelector('.ring').innerHTML = ico(b.dataset.grade === 'good' ? 'right' : 'left');
-  b.addEventListener('click', () => {
-    if (S.busy || !S.queue.length) return;
-    const card = $('#fcard');
-    if (card && !REDUCED) fly(card, b.dataset.grade === 'good' ? 1 : -1);
-    else grade(b.dataset.grade);
-  });
+/* study screen wiring */
+$('#s-star').addEventListener('click', () => {
+  const c = current();
+  if (!c) return;
+  toggleStar(c.c);
+  paintStrip();
 });
+$('#s-focus-clear').addEventListener('click', () => { S.only = null; startSession('all', null, ''); });
+$('#s-rate').querySelectorAll('[data-rate]').forEach(b =>
+  b.addEventListener('click', () => rate(b.dataset.rate)));
 
-$('#b-search').insertAdjacentHTML('beforebegin', ico('search'));
+/* browse */
 let searchT = 0;
+$('#b-search').insertAdjacentHTML('beforebegin', ico('search'));
 $('#b-search').addEventListener('input', e => {
   B.q = e.target.value; B.open = null;
   clearTimeout(searchT);
@@ -1521,7 +2160,7 @@ document.addEventListener('keydown', e => {
   const el = document.activeElement;
   if (el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return;
 
-  if (S.tab === 'game'){
+  if (S.tab === 'games'){
     if (!G.on || G.locked) return;
     const i = 'abcd'.indexOf(e.key.toLowerCase());
     if (i < 0) return;
@@ -1529,56 +2168,48 @@ document.addEventListener('keydown', e => {
     if (btn && !btn.disabled){ e.preventDefault(); btn.click(); }
     return;
   }
+  if (S.tab !== 'study' || S.busy) return;
 
-  if (S.tab !== 'study') return;
-  const card = $('#fcard');
   if (e.key === ' '){
-    if (S.open) return;                   /* leave the spacebar to scroll the answer */
-    e.preventDefault(); reveal();
+    if (S.open) return;                       /* leave the spacebar to scroll */
+    e.preventDefault(); flip();
   } else if (e.key === 'ArrowRight'){
-    if (!card || S.busy) return;
-    e.preventDefault(); fly(card, 1);
+    e.preventDefault(); advance(1);
   } else if (e.key === 'ArrowLeft'){
-    if (!card || S.busy) return;
-    e.preventDefault(); fly(card, -1);
+    e.preventDefault(); if (S.i > 0) advance(-1);
+  } else if (S.open && '1234'.indexOf(e.key) >= 0){
+    e.preventDefault();
+    rate(['again', 'hard', 'good', 'easy'][+e.key - 1]);
   } else if (e.key === 's' || e.key === 'S'){
-    e.preventDefault(); buildQueue(true); renderCard(); toast('Deck shuffled');
+    const c = current();
+    if (c){ e.preventDefault(); toggleStar(c.c); paintStrip(); }
   }
 });
 
-/* a round should not burn down while the phone is locked or the tab is
-   in the background — the clock stops with the screen */
+/* a round should not burn down while the phone is locked */
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) pauseGame();
-  else if (S.tab === 'game') resumeGame();
+  else if (S.tab === 'games') resumeGame();
 });
 
 const bar = $('#appbar');
 addEventListener('scroll', () => { bar.classList.toggle('stuck', window.scrollY > 6); }, { passive:true });
 
-$$('.chips [data-deck]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.deck === S.deck)));
-
 /* keep the card you are on across a republish */
 try {
   if (window.claude && window.claude.hot){
     window.claude.hot.snapshot(() => ({
-      tab:S.tab, deck:S.deck, only:S.only, code:S.queue[0], open:S.open,
-      bq:B.q, bf:B.filter, bo:B.open
+      tab:S.tab, src:S.src, only:S.only, i:S.i, open:S.open, bq:B.q, bf:B.filter, bo:B.open
     }));
   }
 } catch (e){}
 
 function boot(seed){
-  if (seed && seed.deck){
-    S.deck = seed.deck;
-    $$('[data-deck]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.deck === S.deck)));
-  }
+  if (seed && seed.src) S.src = seed.src;
   if (seed && seed.only) S.only = seed.only;
-  buildQueue(false);
-  if (seed && seed.code && BY_CODE[seed.code]){
-    const i = S.queue.indexOf(seed.code);
-    if (i > 0) S.queue.unshift(S.queue.splice(i, 1)[0]);
-    S.open = !!seed.open;
+  startSession(S.src || APP.deck || 'all', S.only, '');
+  if (seed && typeof seed.i === 'number' && seed.i < S.queue.length){
+    S.i = seed.i; S.open = !!seed.open; renderCard();
   }
   if (seed && typeof seed.bq === 'string'){ B.q = seed.bq; $('#b-search').value = seed.bq; }
   if (seed && seed.bf){
@@ -1586,12 +2217,15 @@ function boot(seed){
     $$('[data-bdeck]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.bdeck === B.filter)));
   }
   if (seed && seed.bo) B.open = seed.bo;
-  renderCard();
-  /* a home-screen shortcut names the tab it wants */
+
+  /* a home-screen shortcut names where it wants to land */
   let wanted = '';
   try { wanted = new URLSearchParams(location.search).get('tab') || ''; } catch (e){}
-  const tab = wanted || (seed && seed.tab) || APP.tab;
-  go(tab && tab !== 'settings' ? tab : 'study');
+  if (wanted === 'game') wanted = 'games';       /* shortcut from an older install */
+  let tab = wanted || (seed && seed.tab) || APP.tab || 'home';
+  if (tab === 'settings' || !TABS.some(t => t.id === tab)) tab = 'home';
+  if (tab === 'study' && !S.queue.length) startSession(APP.deck || 'all', null, '');
+  go(tab);
 }
 
 try {

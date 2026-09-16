@@ -24,7 +24,7 @@ furniture, and a service worker that precaches the shell — both pages,
 `engine.js`, every icon — then serves cache-first. Open it once with signal
 and it works offline forever after. The Google Fonts are cached on that first
 visit too, so even the typography survives a dead zone. Three home-screen
-shortcuts jump straight to Study, Browse or Code Rush.
+shortcuts jump straight to Study, Browse or Games.
 
 Every path in the manifest and in the worker is relative, so the app works at
 a subpath like `/project-arm/` as happily as at a domain root. `VERSION` in
@@ -42,62 +42,102 @@ cannot redden the repo for a service nobody asked it to use.
 
 # The pocket app — `index.html`
 
-The same 63 codes as a phone-shaped study app: a sticky header, five tabs
-along the bottom, and a column that tops out at 520px so it reads the same on
-a laptop.
+The same 63 codes as a phone-shaped study app. Five tabs along the bottom —
+Home, Study, Browse, Games, Progress — and a column that tops out at 600px so
+it reads the same on an iPad or a laptop. Settings live behind the gear in
+the header rather than taking a tab of their own.
+
+Everything sizes off the viewport: the card takes whatever height the screen
+can spare, between a floor and a ceiling, so it suits a small iPhone, a large
+iPhone and an iPad without a fixed size. The rating buttons sit at the bottom
+of the screen, within one-handed reach, and every control is at least 44px.
+
+## Home
+
+The first thing on the screen is the one thing you probably came to do:
+**Continue studying**, which reads what is actually due — overdue cards if
+there are any, otherwise codes you have never seen, otherwise the ones you
+starred. Under it, the decks (all, needs practice, G, M), the two games, and
+a summary of progress. One tap to carry on, and nothing else competing for
+the eye.
 
 ## Study
 
-One card at a time. Tap it to reveal, then swipe — right for *Know It*, left
-for *Need Practice* — or press the two buttons under the card. The card
-tracks the drag, tilts, and shows its verdict stamp before it goes.
+One card, one thing on it. The front is the code and nothing else — a
+prompt says *tap card to reveal answer* for the first few flips and then
+retires. Tap anywhere on the card and it turns over to what the code means,
+the plain-English reading of it, and one worked block; the code itself is not
+repeated, because you are looking at the answer to it. **Show the diagram**
+draws the animation of what that code does to the machine, in place, when you
+want it.
 
-Under a revealed card, **Code Details** gives the description, the sample
-block with **every word in it named** — which letter means what is where
-people actually get stuck, and the same letter changes job between lines, so
-`R` reads as an arc radius beside `G02` and as the retract plane inside a
-canned cycle — the animated visual of what the code does to the machine, and
-the shop-floor caution. The strip at the top counts mastered, learning and new
-across whichever deck is filtered — all, G codes or M codes.
+Then four buttons — **Again · Hard · Good · Easy** — each captioned with when
+that choice brings the card back. Rating advances automatically, so a session
+is: read, tap, read, rate.
 
-A drag that starts vertically scrolls the page; only a horizontal one
-grades. `Space` reveals, `←` and `→` grade, `S` shuffles, and focus follows
-the card so a whole session runs from the keyboard.
+**Gestures.** The card does not move at all until a finger has clearly
+committed to a horizontal drag, so a press or a slow read never nudges it.
+Past that threshold it tracks the finger from where the threshold was
+crossed rather than jumping. Swipe left for the next card, right for the
+previous — navigation, not grading; only the rating buttons schedule
+anything. A vertical drag scrolls, and a long answer scrolls *inside* the
+card rather than stretching it off the screen.
 
-When a deck has been narrowed — from Browse, from the codes that need work,
-or from a round's misses — a bar above the card says so and hands back the
-full 63.
+**The schedule.** Six levels, spaced 0, 1, 2, 4, 9 and 21 days apart. *Good*
+moves a card up one, *Easy* two, *Hard* holds it where it is but brings it
+back a little sooner, and *Again* drops it to the bottom, marks a lapse and
+puts it back a few cards later in the same session. A new session deals what
+is overdue first, then what is new, weakest first. Missing a code in a game
+counts against it; a lucky tap in a game never promotes one.
+
+The strip above the card shows *12 of 40* with a bar, and a star that files
+the code under **Needs practice** — a deck you can study on its own.
+
+Finish a deck and you get a session summary: cards studied, how many came
+back right, what needs another pass, and the day streak. Under it: review the
+ones you missed, review the difficult ones, study codes you have not seen
+yet, restart the deck, or go home.
+
+Keys: `Space` reveals · `1`–`4` rate · `←` `→` move · `S` stars.
 
 ## Browse
 
 All 63 codes grouped by function, searchable across the code, the
-description, the notes and the sample block. A row expands in place to the
-full detail with its animation, and can be sent straight to the study queue
-or marked known without drilling it.
+description, the notes and the sample block, and filterable to G, M, starred
+or not-yet-learned. A row expands in place to the full detail with its
+animation, and can be sent straight to the study queue as a deck of one, or
+starred for later.
 
-## Game
+## Games
+
+**Match Up** — six codes and six definitions, shuffled. Pair them; a correct
+pair settles out of the way, a wrong one marks both tiles briefly without
+telling you which was right. It is timed, and the best time is kept.
 
 **Code Rush** — sixty seconds, three lives, four choices. Questions run both
 ways: name what a code does, or name the code that does a thing. Distractors
 come from the same family and, where possible, the same functional group. A
 streak multiplies each answer up to 5×; the high score, best streak and round
 count are kept. `A`–`D` pick without reaching for the screen. Anything missed
-can be handed to the Study tab as a queue of exactly those codes. The clock
-stops with the screen — leave the tab or lock the phone and the round is
-waiting where you left it.
+can be handed to the Study tab as a deck of exactly those codes. The clock
+stops with the screen — lock the phone and the round waits where you left it.
+
+Both games feed the same schedule the Study tab uses, so time spent here is
+not time spent away from studying.
 
 ## Progress
 
-A mastery ring over the whole sheet, the answered and best-streak counts, a
-bar per functional group, the codes that need work, and a tile per code
-shaded by its Leitner box — tap any tile to open that code in Browse.
+A learned ring over the whole sheet, the day streak, the answered count, the
+starred count and the Code Rush high score, a bar per functional group, the
+codes that need work — studiable as their own deck — and a tile per code
+shaded by its level. Tap any tile to open that code in Browse.
 
 ## Settings
 
-Theme (system, light, dark), the deck the app opens on, whether the animated
-visuals draw at all, whether the shop-floor note shows with the answer, and
-an auto-reveal option that shows the answer on the first swipe instead of
-grading blind. Progress can be reset from here.
+Behind the gear: theme (system, light, dark), the deck the app opens on,
+whether the animated visuals draw at all, and whether the shop-floor note
+shows with the answer. Game scores and study progress can each be reset from
+here.
 
 # The workbench — `trainer.html`
 

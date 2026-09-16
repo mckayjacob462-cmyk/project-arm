@@ -18,7 +18,7 @@
   ],
   "shortcuts": [
     { "name": "Study", "short_name": "Study", "url": "./index.html?tab=study" },
-    { "name": "Code Rush", "short_name": "Game", "url": "./index.html?tab=game" },
+    { "name": "Games", "short_name": "Games", "url": "./index.html?tab=games" },
     { "name": "Browse codes", "short_name": "Browse", "url": "./index.html?tab=browse" }
   ]
 }
